@@ -1,165 +1,58 @@
+"""mirs.launch.py: 後方互換プリセット.
+
+実体は mirs_hardware.launch.py に集約. 旧来の `ros2 launch mirs mirs.launch.py`
+呼び出しが壊れないよう、推奨プリセット (RSPあり/EKFあり/静的TFなし) で委譲する.
+
+旧来との差分 (意図的バグ修正):
+- robot_state_publisher を有効化 (旧: コメントアウト)
+- EKF local を有効化 (旧: コメントアウト)
+- static odom->base_link / base_link->laser を無効化 (旧: 有効でTF競合)
+"""
 import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+
 
 def generate_launch_description():
-
     pkg_share = get_package_share_directory('mirs')
 
-    # --- パラメータ管理 ---
     esp_port = DeclareLaunchArgument(
-        'esp_port', 
-        default_value = "/dev/ttyUSB1", 
+        'esp_port', default_value='/dev/ttyUSB1',
         description='Set esp32 usb port.')
-    
     lidar_port = DeclareLaunchArgument(
-        'lidar_port', 
-        default_value = "/dev/ttyUSB0",
+        'lidar_port', default_value='/dev/ttyUSB0',
         description='Set lidar usb port.')
-
     use_sim_time = DeclareLaunchArgument(
-        'use_sim_time', 
-        default_value='false',
-        description='Use simulated clock if true')
-    
-    use_ekf_global = DeclareLaunchArgument(
-        'use_ekf_global', 
-        default_value='true',
-        description='Whether to start the global EKF node.')
-    
-    # --- 設定ファイルのパス ---
-    config_file_path = os.path.join(pkg_share, 'config', 'config.yaml')
-    ekf_config_path = os.path.join(pkg_share, 'config','ekf', 'ekf_params.yaml')
-    # nav2ではglobal ekfは使わないのでコメントアウト
-    # #ekf_global_config_path = os.path.join(pkg_share, 'config', 'ekf', 'ekf_global_params.yaml')
+        'use_sim_time', default_value='false',
+        description='Use simulated clock if true.')
 
-    # --- ノードの定義 ---
-
-    # 1. オドメトリ配信ノード 
-    odometry_node = Node(
-        package='mirs',
-        executable='odometry_publisher',
-        name='odometry_publisher',
-        output='screen',
-        parameters=[config_file_path, {'use_sim_time': LaunchConfiguration('use_sim_time')}]
-    )
-
-    # 2. パラメータ管理ノード
-    parameter_node = Node(
-        package='mirs',
-        executable='parameter_publisher',
-        name='parameter_publisher',
-        output='screen',
-        parameters=[config_file_path, {'use_sim_time': LaunchConfiguration('use_sim_time')}]
-    )
-
-    # 3. Micro-ROS Agent
-    micro_ros = Node(
-        package='micro_ros_agent',
-        executable='micro_ros_agent',
-        name='micro_ros_agent',
-        output='screen',
-        arguments=['serial', '--dev', LaunchConfiguration('esp_port'), '-v6']
-    )
-
-    # 4. LiDARドライバ
-    sllidar_launch = IncludeLaunchDescription(
+    hardware = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('sllidar_ros2'), 'launch', 'sllidar_s1_launch.py')
+            os.path.join(pkg_share, 'launch', 'mirs_hardware.launch.py')
         ),
-        launch_arguments={'serial_port': LaunchConfiguration('lidar_port'), 'serial_baudrate': '256000'}.items()
+        launch_arguments={
+            'esp_port': LaunchConfiguration('esp_port'),
+            'lidar_port': LaunchConfiguration('lidar_port'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'enable_lidar': 'true',
+            'enable_odometry': 'true',
+            'enable_parameter_publisher': 'true',
+            'enable_micro_ros': 'true',
+            'enable_robot_state_publisher': 'true',
+            'urdf_file': 'mirs_2.urdf',
+            'enable_ekf_local': 'true',
+            'enable_static_odom_tf': 'false',
+            'enable_static_laser_tf': 'false',
+        }.items(),
     )
 
-    # 5. Static TF (Base Link -> Laser)
-    base_link_laser_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        output='screen',
-        # LiDAR is mounted with its local Y axis pointing upward:
-        # fixed +90 deg rotation around X.
-        arguments=["--x", "0", "--y", "0", "--z", "0.3",
-                   "--roll", "1.5707963267948966", "--pitch", "0", "--yaw", "0",
-                   "--frame-id", "base_link", "--child-frame-id", "laser"]
-    )
-
-    odom_base_link_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        arguments=["--x","0","--y","0","--z","0","--yaw","0","--pitch","0","--roll","0",
-                   "--frame-id","odom","--child-frame-id","base_link"]
-    )
-    #
-    # # Robot State Publisher (URDF)
-    # urdf_file_name = 'mirs.urdf'
-    # urdf_path = os.path.join(
-    #     get_package_share_directory('mirs'),
-    #     'urdf',
-    #     urdf_file_name)
-    # with open(urdf_path, 'r') as infp:
-    #     robot_desc = infp.read()
-    #
-    # robot_state_publisher_node = Node(
-    #     package='robot_state_publisher',
-    #     executable='robot_state_publisher',
-    #     name='robot_state_publisher',
-    #     output='screen',
-    #     parameters=[{'robot_description': robot_desc, 'use_sim_time': LaunchConfiguration('use_sim_time')}],
-    # )
-    #
-    # # Joint State Publisher (ホイールの回転角度を配信)
-    # joint_state_publisher_node = Node(
-    #     package='joint_state_publisher',
-    #     executable='joint_state_publisher',
-    #     name='joint_state_publisher',
-    #     parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}]
-    # )
-    #
-    # # Local EKF (odom -> base_link)
-    # ekf_node_local = Node(
-    #     package='robot_localization',
-    #     executable='ekf_node',
-    #     name='ekf_filter_node_local',
-    #     output='screen',
-    #     parameters=[ekf_config_path, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
-    #     remappings=[('/odometry/filtered', '/odometry/local')]
-    # )
-
-    # Global EKF (map -> odom)
-    #ekf_node_global = Node(
-    #    package='robot_localization',
-    #    executable='ekf_node',
-    #    name='ekf_filter_node_global',
-    #    output='screen',
-    #    parameters=[ekf_global_config_path, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
-    #    remappings=[('/odometry/filtered', '/odometry/global')],
-    #    condition=IfCondition(LaunchConfiguration('use_ekf_global'))
-    #)
-
-    # --- 起動リストの作成 ---
     ld = LaunchDescription()
-    
     ld.add_action(esp_port)
     ld.add_action(lidar_port)
     ld.add_action(use_sim_time)
-    ld.add_action(use_ekf_global)
-
-    ld.add_action(odometry_node)
-    ld.add_action(parameter_node)
-    ld.add_action(micro_ros)
-    ld.add_action(sllidar_launch)
-
-    ld.add_action(base_link_laser_tf_node)
-    ld.add_action(odom_base_link_tf_node)
-    # ld.add_action(robot_state_publisher_node)
-    # ld.add_action(joint_state_publisher_node)
-    
-    # ld.add_action(ekf_node_local)
-    #ld.add_action(ekf_node_global)
-
+    ld.add_action(hardware)
     return ld

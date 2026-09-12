@@ -13,12 +13,28 @@ def generate_launch_description():
     # パッケージの 'share' ディレクトリへのパスを取得
     mirs_share_dir = get_package_share_directory('mirs')
 
-    # --- 1. mirs.launch.py（ハードウェア起動）のインクルード ---
+    # --- 1. ハードウェア起動 (mirs_hardware.launch.pyを直接Include) ---
+    esp_port = DeclareLaunchArgument(
+        'esp_port', default_value='/dev/ttyUSB1',
+        description='Set esp32 usb port.')
+    lidar_port = DeclareLaunchArgument(
+        'lidar_port', default_value='/dev/ttyUSB0',
+        description='Set lidar usb port.')
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time', default_value='false',
+        description='Use simulated clock if true.')
+
     mirs_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(mirs_share_dir, 'launch', 'mirs.launch.py')
+            os.path.join(mirs_share_dir, 'launch', 'mirs_hardware.launch.py')
         ),
-        launch_arguments={'use_ekf_global': 'false'}.items()
+        launch_arguments={
+            'esp_port': LaunchConfiguration('esp_port'),
+            'lidar_port': LaunchConfiguration('lidar_port'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'enable_ekf_local': 'true',
+            'enable_robot_state_publisher': 'true',
+        }.items()
     )
     
     use_rviz = DeclareLaunchArgument(
@@ -61,6 +77,7 @@ def generate_launch_description():
         'rviz2_file', 
         default_value=os.path.join(
             mirs_share_dir,
+            'config',
             'rviz',
             'default.rviz')
     )
@@ -81,6 +98,9 @@ def generate_launch_description():
 
     ld = LaunchDescription()
     
+    ld.add_action(esp_port)
+    ld.add_action(lidar_port)
+    ld.add_action(use_sim_time_arg)
     ld.add_action(declare_arg_slam_config_file)
     ld.add_action(declare_arg_rviz2_config_path)
     ld.add_action(use_rviz)
