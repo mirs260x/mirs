@@ -22,7 +22,55 @@ docker(仮想環境)を使うか生環境を使うか選ぶことができます
 
 ESP32 と LiDAR を、LiDAR → ESP32 の順に PC へ接続してください。
 ESP32には事前にmirs_espもしくはmirs_esp_pioを送信しておいてください。
-プログラムは LiDAR が USB ポートの若い番号を取る前提で書かれています。順序を変える場合は、起動する launch ファイル内の `/dev/ttyUSB0` と `/dev/ttyUSB1` の記述を入れ替えてください。
+
+#### USBポート番号の考え方
+
+LinuxではUSBシリアル機器は接続順に `/dev/ttyUSB0`、`/dev/ttyUSB1`、…と番号が振られます。
+先に挿した方が若い番号になります。本パッケージの既定値は以下の前提です。
+
+| 機器 | 既定ポート | 接続順 |
+|---|---|---|
+| LiDAR | `/dev/ttyUSB0` | 先に接続 |
+| ESP32 | `/dev/ttyUSB1` | 後に接続 |
+
+#### どちらが何番か確認する方法
+
+ケーブルを挿すたびに番号が変わることがあるため、起動前に確認してください。
+
+```bash
+# 方法1: 接続順にカーネルメッセージが出る
+dmesg | grep -E "ttyUSB|cp210x|ch341" | tail -10
+# 例: 「cp210x converter now attached to ttyUSB0」の直後に挿した機器が ttyUSB0
+
+# 方法2: 機器固有名で見分ける（抜き差しに強くおすすめ）
+ls -l /dev/serial/by-id/
+# 例:
+#   usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_XXXX-if00-port0 -> ../../ttyUSB0
+#   usb-1a86_USB_Serial-if00-port0 -> ../../ttyUSB1
+```
+
+`by-id` 名は機器ごとに固有なので、一度対応をメモしておけば毎回 `dmesg` を見る必要がなくなります。
+LiDAR側は `CP2102`、ESP32側は `CP2102` または `CH340（1a86）` と表示されることが多いです。
+
+#### 順序を変えた場合の起動方法
+
+launch ファイルを編集する必要はありません。引数で上書きしてください。
+
+```bash
+# 既定どおり（LiDAR=USB0、ESP32=USB1）の場合
+ros2 launch mirs mirs.launch.py
+
+# 逆順に挿した場合（LiDAR=USB1、ESP32=USB0）の場合
+ros2 launch mirs mirs.launch.py esp_port:=/dev/ttyUSB0 lidar_port:=/dev/ttyUSB1
+
+# by-id名で指定する場合（番号変動に強くおすすめ）
+ros2 launch mirs mirs.launch.py \
+  esp_port:=/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0 \
+  lidar_port:=/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_XXXX-if00-port0
+```
+
+`XXXX` 部分は各自の環境の `ls -l /dev/serial/by-id/` 出力に読み替えてください。
+`slam.launch.py`、`nav.launch.py` でも同じ `esp_port` / `lidar_port` 引数が使えます。
 
 ### 2. ワークスペースの作成とリポジトリのクローン
 
@@ -157,6 +205,81 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 3. 経路（グローバルパス／ローカルパス）が表示され、ロボットが自律的に走行を開始する
 
 実機へ書き込む前に、ピン割り当て、エンコーダ、車輪径、トレッド幅、モーター出力、非常停止、バッテリー監視の設定を確認してください。
+
+## API リファレンス（安定インターフェース）
+
+このパッケージを直接編集せずに使うための契約です。下表の名前はバージョンをまたいで維持されます。
+拡張したい場合はこのAPI越しに別パッケージから利用してください。
+
+<!-- API-CONTRACT-START -->
+
+### トピック
+
+| 名前 | 型 | 方向 | 説明 |
+|---|---|---|---|
+| `/encoder` | `std_msgs/Int32MultiArray` | 入力（ESP→本Pkg） | `[左, 右]` のエンコーダカウント |
+| `/cmd_vel` | `geometry_msgs/Twist` | 入力（利用者→ESP） | 速度指令（本Pkgはテストスクリプトが発行、購読はESP側） |
+| `/odom` | `nav_msgs/Odometry` | 出力 | オドメトリ（20Hz、`frame_id=odom`） |
+| `/params` | `mirs_msgs/BasicParam` | 出力 | ESP用パラメータ転送（2Hz） |
+| `/scan` | `sensor_msgs/LaserScan` | 出力 | LiDARドライバ（sllidar_ros2経由） |
+| `/traveled_path` | `nav_msgs/Path` | 出力 | 走行軌跡（可視化用） |
+
+### サービス（クライアントは本Pkg、サーバはESP側）
+
+| 名前 | 型 | 用途 |
+|---|---|---|
+| `esp_cmd` | `mirs_msgs/BasicCommand` | 汎用コマンド（`param1`〜`param4`） |
+| `esp_update` | `mirs_msgs/ParameterUpdate` | 車輪・PIDパラメータ更新 |
+| `reboot` | `mirs_msgs/SimpleCommand` | ESP再起動 |
+| `reset_encoder` | `mirs_msgs/SimpleCommand` | エンコーダリセット |
+
+### フレーム
+
+| 名前 | 親 | 発行元 | 説明 |
+|---|---|---|---|
+| `odom` | `map`（SLAM/Nav2時） | EKF（`robot_localization`） | オドメトリ原点 |
+| `base_link` | `odom` | EKF | 機体中心 |
+| `base_footprint` | `base_link` | URDF（`robot_state_publisher`） | 地面投影 |
+| `laser` | `base_link` | URDF | LiDAR取付位置 |
+
+### パラメータ（`config/config.yaml`）
+
+| ノード | キー | 説明 |
+|---|---|---|
+| `odometry_publisher` | `wheel_radius`、`wheel_base`、`count_per_rev` | 車輪径、トレッド幅、1回転カウント |
+| `parameter_publisher` | `wheel_radius`、`wheel_base`、`rkp`、`rki`、`rkd`、`lkp`、`lki`、`lkd` | ESPへ転送する車輪・PID値 |
+
+### 起動引数（`mirs_hardware.launch.py`）
+
+| 引数 | 既定値 | 説明 |
+|---|---|---|
+| `esp_port` | `/dev/ttyUSB1` | ESP32のUSBポート |
+| `lidar_port` | `/dev/ttyUSB0` | LiDARのUSBポート |
+| `lidar_baudrate` | `256000` | LiDARボーレート |
+| `use_sim_time` | `false` | シミュレーション時刻 |
+| `enable_lidar` | `true` | LiDARドライバの有効化 |
+| `enable_odometry` | `true` | `odometry_publisher` の有効化 |
+| `enable_parameter_publisher` | `true` | `parameter_publisher` の有効化 |
+| `enable_micro_ros` | `true` | micro-ROS agentの有効化 |
+| `enable_robot_state_publisher` | `true` | URDF配信の有効化 |
+| `urdf_file` | `mirs_2.urdf` | `urdf/` 以下の機体モデル |
+| `enable_ekf_local` | `true` | EKF（`odom`→`base_link`）の有効化 |
+| `ekf_config_file` | `config/ekf/ekf_params.yaml` | EKF設定ファイル |
+| `enable_static_odom_tf` | `false` | デバッグ用静的TF（EKFと併用不可） |
+| `enable_static_laser_tf` | `false` | 旧仕様静的TF（URDFと併用不可） |
+
+別パッケージから基礎機能を使う例：
+
+```python
+IncludeLaunchDescription(
+    PythonLaunchDescriptionSource(
+        os.path.join(get_package_share_directory('mirs'),
+                     'launch', 'mirs_hardware.launch.py')),
+    launch_arguments={'esp_port': '/dev/ttyUSB1',
+                      'enable_ekf_local': 'true'}.items())
+```
+
+<!-- API-CONTRACT-END -->
 
 ## ライセンス
 
