@@ -1,3 +1,6 @@
+/** @file reboot.cpp
+ *  @brief /reboot サービスでESPを再起動するクライアント。
+ */
 #include "rclcpp/rclcpp.hpp"
 #include "mirs_msgs/srv/simple_command.hpp"
 
@@ -17,10 +20,10 @@ int main(int argc, char **argv)
 
   while (!client->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-      return 0;
+      RCLCPP_ERROR(node->get_logger(), "Interrupted while waiting for the service. Exiting.");
+      return 1;
     }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    RCLCPP_INFO(node->get_logger(), "service not available, waiting again...");
   }
 
   auto result = client->async_send_request(request);
@@ -28,11 +31,13 @@ int main(int argc, char **argv)
   if (rclcpp::spin_until_future_complete(node, result) ==
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Success");
+    const bool ok = result.get()->success;
+    RCLCPP_INFO(node->get_logger(), "Success: %s", ok ? "true" : "false");
+    rclcpp::shutdown();
+    return ok ? 0 : 1;
   } else {
-    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to call service");
+    RCLCPP_ERROR(node->get_logger(), "Failed to call service");
+    rclcpp::shutdown();
+    return 1;
   }
-
-  rclcpp::shutdown();
-  return 0;
 }

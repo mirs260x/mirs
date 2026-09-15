@@ -1,3 +1,6 @@
+/** @file basic_command.cpp
+ *  @brief /esp_cmd サービスで汎用コマンド（param1〜4）を単発送信するクライアント。
+ */
 #include "rclcpp/rclcpp.hpp"
 #include "mirs_msgs/srv/basic_command.hpp"  // 新しいサービスファイルをインクルード
 
@@ -18,7 +21,7 @@ int main(int argc, char **argv)
     auto client = node->create_client<mirs_msgs::srv::BasicCommand>("esp_cmd");
 
     // YAMLファイルからパラメータを読み込むための宣言
-		// 左はyamlから取る値、右はデフォルト値j
+    // 左はyamlから取る値、右はデフォルト値
     node->declare_parameter("param1", 1.0);
     node->declare_parameter("param2", 0.0);
     node->declare_parameter("param3", 0.0);
@@ -27,10 +30,10 @@ int main(int argc, char **argv)
     // サービスが利用可能になるまで待機
     while (!client->wait_for_service(1s)) {
         if (!rclcpp::ok()) {
-            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-            return 0;
+            RCLCPP_ERROR(node->get_logger(), "Interrupted while waiting for the service. Exiting.");
+            return 1;
         }
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+        RCLCPP_INFO(node->get_logger(), "service not available, waiting again...");
     }
 
     // リクエストの作成
@@ -47,11 +50,13 @@ int main(int argc, char **argv)
 
     // 結果を待機
     if (rclcpp::spin_until_future_complete(node, result) == rclcpp::FutureReturnCode::SUCCESS) {
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "リクエストの成功状態: %s", result.get()->success ? "true" : "false");
+        const bool ok = result.get()->success;
+        RCLCPP_INFO(node->get_logger(), "リクエストの成功状態: %s", ok ? "true" : "false");
+        rclcpp::shutdown();
+        return ok ? 0 : 1;
     } else {
-        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "サービス呼び出しに失敗しました。");
+        RCLCPP_ERROR(node->get_logger(), "サービス呼び出しに失敗しました。");
+        rclcpp::shutdown();
+        return 1;
     }
-
-    rclcpp::shutdown();
-    return 0;
 }

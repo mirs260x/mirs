@@ -19,3 +19,12 @@ Copyright (c) 2026 MIRS Tanq Team A
 現在のプロジェクト（mirs260x）は、MIRS Tanq Team Aによってこれらをさらに改変・統合したものです。
 すべてのコンポーネントはMITライセンスの下で提供されています。
 詳細については、ルートディレクトリのLICENSEファイルを参照してください。
+
+第三者ライセンスのファイル（上記MITの例外）：
+- config/navigation/nav2_params.yaml
+  - 派生元: ros-navigation/navigation2 (Apache-2.0)
+  - ファイル先頭のSPDX表記に従うこと。ライセンス文は LICENSES/Apache-2.0.txt。
+- config/slam/slam_toolbox_config.yaml
+  - 派生元: SteveMacenski/slam_toolbox (LGPL-2.1)
+  - ファイル先頭のSPDX表記に従うこと。ライセンス文は LICENSES/LGPL-2.1.txt。
+- 改変時は各ファイル先頭コメントに日付を追記すること（Apache-2.0 §4(b)、LGPL-2.1 §2(c)対応）。詳細履歴は git log で確認する。

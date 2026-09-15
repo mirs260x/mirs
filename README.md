@@ -217,9 +217,8 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 
 | 名前 | 型 | 方向 | 説明 |
 |---|---|---|---|
-| `/encoder` | `std_msgs/Int32MultiArray` | 入力（ESP→本Pkg） | `[左, 右]` のエンコーダカウント |
 | `/cmd_vel` | `geometry_msgs/Twist` | 入力（利用者→ESP） | 速度指令（本Pkgはテストスクリプトが発行、購読はESP側） |
-| `/odom` | `nav_msgs/Odometry` | 出力 | オドメトリ（20Hz、`frame_id=odom`） |
+| `/odom` | `nav_msgs/Odometry` | 出力 | オドメトリ（ESP32がmicro-ROS経由で配信、`frame_id=odom`） |
 | `/params` | `mirs_msgs/BasicParam` | 出力 | ESP用パラメータ転送（2Hz） |
 | `/scan` | `sensor_msgs/LaserScan` | 出力 | LiDARドライバ（sllidar_ros2経由） |
 | `/traveled_path` | `nav_msgs/Path` | 出力 | 走行軌跡（可視化用） |
@@ -239,14 +238,13 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 |---|---|---|---|
 | `odom` | `map`（SLAM/Nav2時） | EKF（`robot_localization`） | オドメトリ原点 |
 | `base_link` | `odom` | EKF | 機体中心 |
-| `base_footprint` | `base_link` | URDF（`robot_state_publisher`） | 地面投影 |
-| `laser` | `base_link` | URDF | LiDAR取付位置 |
+| `base_footprint` | `odom` | EKF（`robot_localization`） | 地面投影（`base_link` の親） |
+| `laser` | `base_link` | 静的TF | LiDAR取付位置 |
 
 ### パラメータ（`config/config.yaml`）
 
 | ノード | キー | 説明 |
 |---|---|---|
-| `odometry_publisher` | `wheel_radius`、`wheel_base`、`count_per_rev` | 車輪径、トレッド幅、1回転カウント |
 | `parameter_publisher` | `wheel_radius`、`wheel_base`、`rkp`、`rki`、`rkd`、`lkp`、`lki`、`lkd` | ESPへ転送する車輪・PID値 |
 
 ### 起動引数（`mirs_hardware.launch.py`）
@@ -258,15 +256,13 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 | `lidar_baudrate` | `256000` | LiDARボーレート |
 | `use_sim_time` | `false` | シミュレーション時刻 |
 | `enable_lidar` | `true` | LiDARドライバの有効化 |
-| `enable_odometry` | `true` | `odometry_publisher` の有効化 |
 | `enable_parameter_publisher` | `true` | `parameter_publisher` の有効化 |
 | `enable_micro_ros` | `true` | micro-ROS agentの有効化 |
-| `enable_robot_state_publisher` | `true` | URDF配信の有効化 |
-| `urdf_file` | `mirs_2.urdf` | `urdf/` 以下の機体モデル |
-| `enable_ekf_local` | `true` | EKF（`odom`→`base_link`）の有効化 |
+| `enable_ekf_local` | `true` | EKF（`odom`→`base_footprint`）の有効化 |
 | `ekf_config_file` | `config/ekf/ekf_params.yaml` | EKF設定ファイル |
-| `enable_static_odom_tf` | `false` | デバッグ用静的TF（EKFと併用不可） |
-| `enable_static_laser_tf` | `false` | 旧仕様静的TF（URDFと併用不可） |
+| `enable_static_odom_tf` | `false` | 静的TF（EKFと併用不可のためfalse維持） |
+| `enable_static_laser_tf` | `true` | 静的TF（`base_link`→`laser`） |
+| `enable_static_footprint_tf` | `true` | 静的TF（`base_footprint`→`base_link`） |
 
 別パッケージから基礎機能を使う例：
 

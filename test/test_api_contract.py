@@ -61,19 +61,19 @@ def test_contract_services_exist_in_code():
 def test_contract_launch_args_exist_in_hardware():
     contract = _contract()
     hw = (ROOT / "launch/mirs_hardware.launch.py").read_text()
-    args = set(re.findall(r"`(enable_[a-z_]+|urdf_file|ekf_config_file"
-                          r"|esp_port|lidar_port|lidar_baudrate"
-                          r"|use_sim_time)`", contract))
+    args = set(re.findall(r"`(enable_[a-z_]+|ekf_config_file"
+                           r"|esp_port|lidar_port|lidar_baudrate"
+                           r"|use_sim_time)`", contract))
     assert len(args) >= 10, f"too few launch args documented: {args}"
     for a in args:
         assert f"'{a}'" in hw, f"launch arg {a} missing in mirs_hardware"
 
 
-def test_contract_frames_exist_in_code_or_urdf():
+def test_contract_frames_exist_in_code():
     contract = _contract()
     frames = set(re.findall(r"`(odom|base_link|base_footprint|laser|map)`",
                             contract))
     assert {"odom", "base_link"}.issubset(frames)
-    hay = _code() + (ROOT / "urdf/mirs_2.urdf").read_text()
+    hay = _code() + (ROOT / "launch/mirs_hardware.launch.py").read_text()
     for f in frames:
         assert f in hay, f"frame {f} not found"

@@ -5,21 +5,6 @@ project(mirs)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(mirs_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2 REQUIRED)
-
-add_executable(odometry_publisher src/odometry_publisher.cpp)
-ament_target_dependencies(odometry_publisher 
-  rclcpp
-  std_msgs
-  nav_msgs
-  geometry_msgs
-  tf2_ros
-  tf2
-)
 
 add_executable(parameter_publisher src/parameter_publisher.cpp)
 ament_target_dependencies(parameter_publisher
@@ -29,12 +14,6 @@ ament_target_dependencies(parameter_publisher
 
 add_executable(basic src/basic_command.cpp)
 ament_target_dependencies(basic
-  rclcpp
-  mirs_msgs
-)
-
-add_executable(test_cli src/test.cpp)
-ament_target_dependencies(test_cli
   rclcpp
   mirs_msgs
 )
@@ -58,7 +37,6 @@ ament_target_dependencies(reset
 )
 
 install(TARGETS
-  odometry_publisher
   parameter_publisher
   update
   reboot
@@ -78,7 +56,6 @@ install(DIRECTORY
   config
   launch
   maps
-  urdf
   DESTINATION share/${PROJECT_NAME}/
 )
 
@@ -86,8 +63,7 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
   find_package(ament_cmake_pytest REQUIRED)
-  ament_add_pytest_test(test_mirs
-    TEST_DIR test
+  ament_add_pytest_test(test_mirs test
     TIMEOUT 60
   )
 endif()

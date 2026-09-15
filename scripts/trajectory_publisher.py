@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+"""走行軌跡を /traveled_path (nav_msgs/Path) に配信するノード。"""
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import PoseStamped
 
 class TrajectoryPublisher(Node):
+    """一定距離ごとに /odom を Path に蓄積する（上限超過分は破棄）。"""
     def __init__(self):
         super().__init__('trajectory_publisher')
         
         self.declare_parameter('frame_id', 'odom')
+        self.declare_parameter('min_distance', 0.05)  # [m] この距離以上動いたら記録
+        self.declare_parameter('max_jump', 0.5)  # [m] 一気に飛んだらノイズとみなして無視
+        self.declare_parameter('max_poses', 10000)  # 軌跡の保持上限
         self.frame_id = self.get_parameter('frame_id').value
         
         self.path_pub = self.create_publisher(Path, '/traveled_path', 10)
@@ -18,7 +23,9 @@ class TrajectoryPublisher(Node):
         self.path_msg.header.frame_id = self.frame_id
         
         self.last_pose = None
-        self.min_distance = 0.05 # 5cm以上動いたら記録
+        self.min_distance = self.get_parameter('min_distance').value
+        self.max_jump = self.get_parameter('max_jump').value
+        self.max_poses = self.get_parameter('max_poses').value
 
     def odom_callback(self, msg):
         current_pose = msg.pose.pose
@@ -29,9 +36,8 @@ class TrajectoryPublisher(Node):
 
         dist = self.calculate_distance(self.last_pose, current_pose)
 
-        # 異常値フィルタ: 0.5m以上一気に飛んだらノイズとみなして無視
-        if dist > 0.5:
-            # self.get_logger().warn(f'Jump detected ({dist:.2f}m). Ignoring.')
+        # 異常値フィルタ: ノイズとみなして無視
+        if dist > self.max_jump:
             return
 
         # 一定距離動いたら記録
@@ -42,6 +48,8 @@ class TrajectoryPublisher(Node):
             pose_stamped.pose = current_pose
             
             self.path_msg.poses.append(pose_stamped)
+            if len(self.path_msg.poses) > self.max_poses:
+                del self.path_msg.poses[0:len(self.path_msg.poses) - self.max_poses]
             self.path_msg.header.stamp = msg.header.stamp
             
             self.path_pub.publish(self.path_msg)

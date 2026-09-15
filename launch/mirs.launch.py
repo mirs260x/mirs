@@ -1,12 +1,12 @@
 """mirs.launch.py: 後方互換プリセット.
 
 実体は mirs_hardware.launch.py に集約. 旧来の `ros2 launch mirs mirs.launch.py`
-呼び出しが壊れないよう、推奨プリセット (RSPあり/EKFあり/静的TFなし) で委譲する.
+呼び出しが壊れないよう委譲する.
 
-旧来との差分 (意図的バグ修正):
-- robot_state_publisher を有効化 (旧: コメントアウト)
-- EKF local を有効化 (旧: コメントアウト)
-- static odom->base_link / base_link->laser を無効化 (旧: 有効でTF競合)
+基本方針 (静的TF運用・差動二輪):
+- EKF local は有効 (odom->base_footprint)
+- static base_footprint->base_link / base_link->laser を有効
+- オドメトリ計算はESP32側 (/odomはmicro-ROS経由)
 """
 import os
 
@@ -29,6 +29,21 @@ def generate_launch_description():
     use_sim_time = DeclareLaunchArgument(
         'use_sim_time', default_value='false',
         description='Use simulated clock if true.')
+    enable_static_laser_tf = DeclareLaunchArgument(
+        'enable_static_laser_tf', default_value='true',
+        description='Publish static base_link->laser.')
+    enable_static_odom_tf = DeclareLaunchArgument(
+        'enable_static_odom_tf', default_value='false',
+        description='Publish static odom->base_link (EKFと競合するためfalse維持).')
+    enable_static_footprint_tf = DeclareLaunchArgument(
+        'enable_static_footprint_tf', default_value='true',
+        description='Publish static base_footprint->base_link.')
+    enable_lidar = DeclareLaunchArgument(
+        'enable_lidar', default_value='true',
+        description='Enable LiDAR driver.')
+    enable_micro_ros = DeclareLaunchArgument(
+        'enable_micro_ros', default_value='true',
+        description='Enable micro-ROS agent.')
 
     hardware = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -38,15 +53,13 @@ def generate_launch_description():
             'esp_port': LaunchConfiguration('esp_port'),
             'lidar_port': LaunchConfiguration('lidar_port'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'enable_lidar': 'true',
-            'enable_odometry': 'true',
+            'enable_lidar': LaunchConfiguration('enable_lidar'),
             'enable_parameter_publisher': 'true',
-            'enable_micro_ros': 'true',
-            'enable_robot_state_publisher': 'true',
-            'urdf_file': 'mirs_2.urdf',
+            'enable_micro_ros': LaunchConfiguration('enable_micro_ros'),
             'enable_ekf_local': 'true',
-            'enable_static_odom_tf': 'false',
-            'enable_static_laser_tf': 'false',
+            'enable_static_odom_tf': LaunchConfiguration('enable_static_odom_tf'),
+            'enable_static_laser_tf': LaunchConfiguration('enable_static_laser_tf'),
+            'enable_static_footprint_tf': LaunchConfiguration('enable_static_footprint_tf'),
         }.items(),
     )
 
@@ -54,5 +67,10 @@ def generate_launch_description():
     ld.add_action(esp_port)
     ld.add_action(lidar_port)
     ld.add_action(use_sim_time)
+    ld.add_action(enable_static_laser_tf)
+    ld.add_action(enable_static_odom_tf)
+    ld.add_action(enable_static_footprint_tf)
+    ld.add_action(enable_lidar)
+    ld.add_action(enable_micro_ros)
     ld.add_action(hardware)
     return ld

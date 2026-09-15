@@ -1,3 +1,4 @@
+"""nav.launch.py: ハードウェア＋Nav2＋RVizの起動構成。"""
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -39,7 +40,7 @@ def generate_launch_description():
         'lidar_port', default_value='/dev/ttyUSB0',
         description='Set lidar usb port.')
 
-    # 3. MIRS本体のハードウェア (mirs_hardware.launch.pyを直接Include)
+    # MIRS本体のハードウェア (mirs_hardware.launch.pyを直接Include)
     mirs_hardware_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(mirs_share_dir, 'launch', 'mirs_hardware.launch.py')
@@ -49,21 +50,20 @@ def generate_launch_description():
             'lidar_port': LaunchConfiguration('lidar_port'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'enable_ekf_local': 'true',
-            'enable_robot_state_publisher': 'true',
         }.items()
     )
 
-    # 5. Nav2 の設定ファイル（mirsパッケージのものを使用）
+    # Nav2 の設定ファイル（mirsパッケージのものを使用）
     nav2_params_file = os.path.join(
         mirs_share_dir, 'config', 'navigation', 'nav2_params.yaml'
     )
 
-    # 6. Rviz の設定ファイル（Nav2標準のものを使用）
+    # Rviz の設定ファイル（Nav2標準のものを使用）
     rviz_config_file = os.path.join(
         nav2_bringup_dir, 'rviz', 'nav2_default_view.rviz'
     )
 
-    # 7. Nav2 スタック本体の起動
+    # Nav2 スタック本体の起動
     nav2_bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_bringup_dir, 'launch', 'bringup_launch.py')
@@ -76,7 +76,7 @@ def generate_launch_description():
         }.items()
     )
 
-    # 8. Rviz の起動
+    # Rviz の起動
     rviz_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_bringup_dir, 'launch', 'rviz_launch.py')
@@ -87,14 +87,14 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('use_rviz'))
     )
 
-    # 9. 起動するものをリストにして返す
+    # 起動するものをリストにして返す
     return LaunchDescription([
         map_yaml_file,         # マップ引数
         use_rviz,              # RViz起動フラグ
         use_sim_time,          # シミュレーション時間フラグ
         esp_port,
         lidar_port,
-        mirs_hardware_launch,  # MIRS本体 (T1の代わり)
-        nav2_bringup_launch,   # Nav2本体 (T2の代わり)
-        rviz_node,              # Rviz (T3の代わり)
+        mirs_hardware_launch,  # MIRS本体
+        nav2_bringup_launch,   # Nav2本体
+        rviz_node,              # Rviz
     ])

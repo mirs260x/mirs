@@ -1,3 +1,4 @@
+"""slam.launch.py: ハードウェア＋slam_toolbox＋RVizの起動構成。"""
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -33,7 +34,6 @@ def generate_launch_description():
             'lidar_port': LaunchConfiguration('lidar_port'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'enable_ekf_local': 'true',
-            'enable_robot_state_publisher': 'true',
         }.items()
     )
     
@@ -65,7 +65,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'slam_params_file': slam_config_file,
-            'use_sim_time': 'false',
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
             'autostart': 'true',
         }.items()
     )
@@ -90,7 +90,7 @@ def generate_launch_description():
         output='screen',
         arguments=['-d', rviz2_file],
         parameters=[
-            {'use_sim_time': False}
+            {'use_sim_time': LaunchConfiguration('use_sim_time')}
         ],
         condition=IfCondition(LaunchConfiguration('use_rviz'))
     )

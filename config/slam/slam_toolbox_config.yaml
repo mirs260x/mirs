@@ -1,3 +1,11 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# Derived from SteveMacenski/slam_toolbox (LGPL-2.1):
+#   https://github.com/SteveMacenski/slam_toolbox/blob/ros2/config/mapper_params_offline.yaml
+# 本プロジェクトはMITだが、本ファイルは上記の派生物としてLGPL-2.1が適用される。
+# 変更履歴（LGPL-2.1 §2(c)対応。改変時は日付を追記すること。詳細は git log）:
+#   2026-09-15: map_update_interval 10.0→1.0、minimum_travel_distance/heading 0.5→0.1、
+#     max_laser_range 20.0→40.0、未使用キー（use_map_saver/restamp_tf/min_laser_range/
+#     check_min_dist_and_heading_precisely/min_pass_through/occupancy_threshold）削除。
 # Ref: https://github.com/SteveMacenski/slam_toolbox/blob/dashing-devel/config/mapper_params_offline.yaml
 slam_toolbox:
   ros__parameters:

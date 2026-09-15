@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""オドメトリ回転精度の手動テストノード（一回転して停止）。"""
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -8,6 +9,7 @@ import time
 from tf_transformations import euler_from_quaternion
 
 class OdomRotateTest(Node):
+    """P制御で目標角度だけ回転するテストノード。"""
     def __init__(self):
         super().__init__('odom_rotate_test')
         

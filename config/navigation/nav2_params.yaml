@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Derived from ros-navigation/navigation2 (Apache-2.0):
+#   https://github.com/ros-navigation/navigation2/blob/humble/nav2_bringup/params/nav2_params.yaml
+# 本プロジェクトはMITだが、本ファイルは上記の派生物としてApache-2.0が適用される。
+# 変更履歴（Apache-2.0 §4(b)対応。改変時は日付を追記すること。詳細は git log）:
+#   2026-09-15: yaml_filename を空文字に（launch引数 map で上書き）。それ以前の調整は git log 参照。
 amcl:
   ros__parameters:
     use_sim_time: False
@@ -131,8 +137,8 @@ controller_server:
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.4
       yaw_goal_tolerance: 6.28
-    # DWB parameters
-    FollowPath:
+    # DWB parameters (FollowPathとCoverageControllerは同一設定。片方だけ変えると挙動差が出るためエイリアスで共有する)
+    FollowPath: &dwb_common
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
       min_vel_x: 0.0
@@ -172,45 +178,7 @@ controller_server:
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 
-    CoverageController:
-      plugin: "dwb_core::DWBLocalPlanner"
-      debug_trajectory_details: True
-      min_vel_x: 0.0
-      min_vel_y: 0.0
-      max_vel_x: 0.26
-      max_vel_y: 0.0
-      max_vel_theta: 1.0
-      min_speed_xy: 0.0
-      max_speed_xy: 0.26
-      min_speed_theta: 0.3
-      acc_lim_x: 2.5
-      acc_lim_y: 0.0
-      acc_lim_theta: 3.2
-      decel_lim_x: -2.5
-      decel_lim_y: 0.0
-      decel_lim_theta: -3.2
-      vx_samples: 40
-      vy_samples: 5
-      vtheta_samples: 20
-      sim_time: 2.5
-      linear_granularity: 0.05
-      angular_granularity: 0.025
-      transform_tolerance: 0.2
-      xy_goal_tolerance: 0.50
-      trans_goal_tolerance: 0.25
-      short_circuit_trajectory_evaluation: True
-      stateful: True
-      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      BaseObstacle.scale: 0.001
-      PathAlign.scale: 16.0
-      PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 12.0
-      GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 24.0
-      GoalDist.scale: 24.0
-      RotateToGoal.scale: 32.0
-      RotateToGoal.slowing_factor: 5.0
-      RotateToGoal.lookahead_time: -1.0
+    CoverageController: *dwb_common
 
 local_costmap:
   local_costmap:
@@ -311,9 +279,9 @@ global_costmap:
 map_server:
   ros__parameters:
     #use_sim_time: False
-    # Overridden in launch by the "map" launch configuration or provided default value.
-    # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
-    yaml_filename: "/root/projects/mirsws/src/mirs_mg5/mirs/maps/rouka7.yaml"
+    # 地図はlaunch引数 map で上書きされる（bringupがyaml_filenameを置換）。
+    # 単体起動時のみここに絶対パスを書くこと。旧絶対パスは無効なため空にした。
+    yaml_filename: ""
 
 map_saver:
   ros__parameters:

@@ -14,10 +14,12 @@ LAUNCH = ROOT / "launch"
 
 def test_config_yaml_params_sane():
     cfg = yaml.safe_load((ROOT / "config/config.yaml").read_text())
-    odo = cfg["odometry_publisher"]["ros__parameters"]
-    assert odo["wheel_radius"] > 0
-    assert odo["wheel_base"] > 0
-    assert odo["count_per_rev"] > 0
+    assert "odometry_publisher" not in cfg, "odometry calc moved to ESP32"
+    prm = cfg["parameter_publisher"]["ros__parameters"]
+    assert prm["wheel_radius"] > 0
+    assert prm["wheel_base"] > 0
+    for k in ["rkp", "rki", "rkd", "lkp", "lki", "lkd"]:
+        assert k in prm
 
 
 def test_referenced_files_exist():
@@ -31,7 +33,7 @@ def test_referenced_files_exist():
         for m in pat.finditer(f.read_text()):
             parts = re.findall(r"['\"]([^'\"]+)['\"]", m.group(1))
             # パッケージ外 (nav2_bringup等のrviz等) は対象外
-            if not parts or parts[0] not in ("config", "maps", "rviz", "urdf", "launch"):
+            if not parts or parts[0] not in ("config", "maps", "rviz", "launch"):
                 continue
             # LaunchConfigurationを含む動的パスはスキップ
             if "LaunchConfiguration" in m.group(0):

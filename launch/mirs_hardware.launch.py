@@ -1,10 +1,11 @@
 """mirs_hardware.launch.py: ハードウェア層の単一真実 (Single Source of Truth).
 
-従来 mirs.launch.py / mirs_odom_only.launch.py / mirs_minimum.launch.py に
-三重複製されていた odometry / parameter / micro_ros / sllidar 定義を集約.
+parameter / micro_ros / sllidar 定義を集約.
+機体は単純な差動二輪として扱う (URDFなし。静的TF運用)。
+(オドメトリ計算はESP32側に移管し、本ファイルでは扱わない)
 
-上位launch (slam/nav/system_bringup*) はこのファイルを直接Includeし、
-mirs.launch.py 等は後方互換のための薄いプリセットとして残す.
+上位launch (slam/nav) はこのファイルを直接Includeし、
+mirs.launch.py は後方互換のための薄いプリセットとして残す.
 """
 import os
 
@@ -13,9 +14,8 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, Command
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -38,23 +38,12 @@ def generate_launch_description():
     enable_lidar = DeclareLaunchArgument(
         'enable_lidar', default_value='true',
         description='Enable LiDAR driver.')
-    enable_odometry = DeclareLaunchArgument(
-        'enable_odometry', default_value='true',
-        description='Enable odometry_publisher.')
     enable_parameter_publisher = DeclareLaunchArgument(
         'enable_parameter_publisher', default_value='true',
         description='Enable parameter_publisher.')
     enable_micro_ros = DeclareLaunchArgument(
         'enable_micro_ros', default_value='true',
         description='Enable micro-ROS agent.')
-
-    enable_robot_state_publisher = DeclareLaunchArgument(
-        'enable_robot_state_publisher', default_value='true',
-        description='Enable robot_state_publisher (URDF). '
-                    'True推奨。True時は static base_link->laser を使わないこと.')
-    urdf_file = DeclareLaunchArgument(
-        'urdf_file', default_value='mirs_2.urdf',
-        description='URDF file name under mirs/urdf (xacroで処理される).')
 
     enable_ekf_local = DeclareLaunchArgument(
         'enable_ekf_local', default_value='true',
@@ -65,35 +54,21 @@ def generate_launch_description():
         default_value=os.path.join(pkg_share, 'config', 'ekf', 'ekf_params.yaml'),
         description='EKF config file (absolute path推奨).')
 
-    # 下記2つはデバッグ用。通常はfalse。EKFと同時有効化はTF競合になるため禁止.
+    # 静的TF運用が基本。odom->base_linkはEKFが出すためfalse維持。
     enable_static_odom_tf = DeclareLaunchArgument(
         'enable_static_odom_tf', default_value='false',
-        description='Publish static odom->base_link (debug only, conflicts with EKF).')
+        description='Publish static odom->base_link (conflicts with EKF, keep false).')
     enable_static_laser_tf = DeclareLaunchArgument(
-        'enable_static_laser_tf', default_value='false',
-        description='Publish static base_link->laser (legacy, conflicts with URDF).')
+        'enable_static_laser_tf', default_value='true',
+        description='Publish static base_link->laser.')
+    # base_footprint->base_linkの静的TF。
+    enable_static_footprint_tf = DeclareLaunchArgument(
+        'enable_static_footprint_tf', default_value='true',
+        description='Publish static base_footprint->base_link.')
 
     config_file_path = os.path.join(pkg_share, 'config', 'config.yaml')
-    urdf_path = os.path.join(
-        pkg_share, 'urdf', LaunchConfiguration('urdf_file'))
-    # NOTE: LaunchConfigurationは文字列結合できないため、RSP用には
-    # urdf_fileのデフォルト値解決をNode側に委ねず、Commandで遅延評価する.
-    # ここでは代表パス (mirs_2.urdf) を使い、urdf_file変更時は下記robot_descが追従するよう
-    # Command substitutionで組み立てる.
-    robot_desc = ParameterValue(
-        Command(['xacro ', pkg_share, '/urdf/', LaunchConfiguration('urdf_file')]),
-        value_type=str)
 
-    # --- ノード ---
-    odometry_node = Node(
-        package='mirs',
-        executable='odometry_publisher',
-        name='odometry_publisher',
-        output='screen',
-        parameters=[config_file_path, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
-        condition=IfCondition(LaunchConfiguration('enable_odometry')),
-    )
-
+    # --- ノード (オドメトリ計算はESP32側。/odomはmicro-ROS経由) ---
     parameter_node = Node(
         package='mirs',
         executable='parameter_publisher',
@@ -124,16 +99,6 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('enable_lidar')),
     )
 
-    robot_state_publisher_node = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        name='robot_state_publisher',
-        output='screen',
-        parameters=[{'robot_description': robot_desc,
-                     'use_sim_time': LaunchConfiguration('use_sim_time')}],
-        condition=IfCondition(LaunchConfiguration('enable_robot_state_publisher')),
-    )
-
     ekf_node_local = Node(
         package='robot_localization',
         executable='ekf_node',
@@ -145,38 +110,54 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('enable_ekf_local')),
     )
 
-    static_odom_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_transform_publisher_odom_base_link',
-        arguments=['0', '0', '0', '0', '0', '0', 'odom', 'base_link'],
-        condition=IfCondition(LaunchConfiguration('enable_static_odom_tf')),
+    def static_tf_node(name, arguments, condition):
+        """tf2_ros static_transform_publisherの定型Node。"""
+        return Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name=name,
+            output='screen',
+            arguments=arguments,
+            condition=condition,
+        )
+
+    static_odom_tf_node = static_tf_node(
+        'static_transform_publisher_odom_base_link',
+        ['0', '0', '0', '0', '0', '0', 'odom', 'base_link'],
+        IfCondition(LaunchConfiguration('enable_static_odom_tf')),
     )
 
-    static_laser_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_transform_publisher_base_laser',
-        output='screen',
-        arguments=['--x', '0', '--y', '0', '--z', '0.3',
-                   '--roll', '1.5707963267948966', '--pitch', '0', '--yaw', '0',
-                   '--frame-id', 'base_link', '--child-frame-id', 'laser'],
-        condition=IfCondition(LaunchConfiguration('enable_static_laser_tf')),
+    static_laser_tf_node = static_tf_node(
+        'static_transform_publisher_base_laser',
+        # z = 0.06 + 0.178/2 + 0.051/2 = 0.1745, rpy 0 0 0
+        ['--x', '0', '--y', '0', '--z', '0.1745',
+         '--roll', '0', '--pitch', '0', '--yaw', '0',
+         '--frame-id', 'base_link', '--child-frame-id', 'laser'],
+        IfCondition(LaunchConfiguration('enable_static_laser_tf')),
     )
 
-    _ = urdf_path  # 将来の拡張用 (現状はCommandで遅延解決するため未使用)
+    static_footprint_tf_node = static_tf_node(
+        'static_transform_publisher_footprint_base_link',
+        # z = 0.0665*2 + 0.02 + 0.178/2 = 0.242, rpy 0 0 0
+        ['--x', '0', '--y', '0', '--z', '0.242',
+         '--roll', '0', '--pitch', '0', '--yaw', '0',
+         '--frame-id', 'base_footprint', '--child-frame-id', 'base_link'],
+        IfCondition(LaunchConfiguration('enable_static_footprint_tf')),
+    )
 
     ld = LaunchDescription()
     for a in (esp_port, lidar_port, lidar_baudrate, use_sim_time,
-              enable_lidar, enable_odometry, enable_parameter_publisher,
-              enable_micro_ros, enable_robot_state_publisher, urdf_file,
+              enable_lidar, enable_parameter_publisher,
+              enable_micro_ros,
               enable_ekf_local, ekf_config_file,
-              enable_static_odom_tf, enable_static_laser_tf):
+              enable_static_odom_tf, enable_static_laser_tf,
+              enable_static_footprint_tf):
         ld.add_action(a)
 
-    for n in (odometry_node, parameter_node, micro_ros, sllidar_launch,
-              robot_state_publisher_node, ekf_node_local,
-              static_odom_tf_node, static_laser_tf_node):
+    for n in (parameter_node, micro_ros, sllidar_launch,
+              ekf_node_local,
+              static_odom_tf_node, static_laser_tf_node,
+              static_footprint_tf_node):
         ld.add_action(n)
 
     return ld

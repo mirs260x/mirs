@@ -1,2 +1,4 @@
 __pycache__/
 .pytest_cache/
+# Doxygen generated output (rebuilt with `doxygen Doxyfile`)
+docs/generated/

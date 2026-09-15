@@ -39,23 +39,37 @@ def _declare_args(src):
 def test_hardware_declares_expected_args():
     args = _declare_args(HARDWARE.read_text())
     for expected in ["esp_port", "lidar_port", "use_sim_time",
-                     "enable_lidar", "enable_odometry",
+                     "enable_lidar",
                      "enable_parameter_publisher", "enable_micro_ros",
-                     "enable_robot_state_publisher", "urdf_file",
                      "enable_ekf_local", "ekf_config_file",
-                     "enable_static_odom_tf", "enable_static_laser_tf"]:
+                     "enable_static_odom_tf", "enable_static_laser_tf",
+                     "enable_static_footprint_tf"]:
         assert expected in args, f"missing arg: {expected}"
+    assert "enable_odometry" not in args, "odometry calc moved to ESP32"
+    for removed in ["enable_robot_state_publisher", "urdf", "urdf_file"]:
+        assert removed not in args, f"URDF arg must be gone: {removed}"
 
 
 def test_hardware_defaults_are_safe():
     src = HARDWARE.read_text()
-    assert "config', 'ekf', 'ekf_params.yaml" in src.replace('"', "'")
-    # 静的TFの既定はfalseであること
-    for name in ["enable_static_odom_tf", "enable_static_laser_tf"]:
+
+    def _default(name):
         idx = src.find(f"'{name}'")
-        assert idx != -1
-        window = src[idx:idx + 400]
-        assert "default_value='false'" in window.replace('"', "'").replace(" ", "")
+        assert idx != -1, f"missing arg: {name}"
+        window = src[idx:idx + 400].replace('"', "'").replace(" ", "")
+        for val in ("default_value='false'", "default_value='true'"):
+            if val in window:
+                return val
+        raise AssertionError(f"no default for {name}")
+
+    assert "config', 'ekf', 'ekf_params.yaml" in src.replace('"', "'")
+    # 基本は静的TF運用: odom静的TFなし、laser/footprint静的TFあり
+    assert _default("enable_static_odom_tf") == "default_value='false'"
+    assert _default("enable_static_laser_tf") == "default_value='true'"
+    assert _default("enable_static_footprint_tf") == "default_value='true'"
+    # 静的laser/footprint TFのz値が変わっていないこと
+    assert "0.1745" in src
+    assert "0.242" in src
 
 
 def test_uppers_include_hardware_directly_with_forwarding():
