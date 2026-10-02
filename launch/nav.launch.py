@@ -1,3 +1,4 @@
+"""nav.launch.py: ハードウェア＋Nav2＋RVizの起動構成。"""
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -12,7 +13,7 @@ def generate_launch_description():
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
 
     # --- 引数の定義 ---
-    # マップファイルのデフォルトパス (パッケージ内の maps/my_mirs_map.yaml)
+    # マップファイルのデフォルトパス (パッケージ内の maps/rouka7.yaml)
     default_map_path = os.path.join(mirs_share_dir, 'maps', 'rouka7.yaml')
     
     map_yaml_file = DeclareLaunchArgument(
@@ -32,26 +33,37 @@ def generate_launch_description():
         description='Use simulation (Gazebo) clock if true'
     )
 
-    # 3. MIRS本体のハードウェア（odom, /scan, micro-ros, TF）を起動
-    # mirs.launch.py のインクルード
+    esp_port = DeclareLaunchArgument(
+        'esp_port', default_value='/dev/ttyUSB1',
+        description='Set esp32 usb port.')
+    lidar_port = DeclareLaunchArgument(
+        'lidar_port', default_value='/dev/ttyUSB0',
+        description='Set lidar usb port.')
+
+    # MIRS本体のハードウェア (mirs_hardware.launch.pyを直接Include)
     mirs_hardware_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(mirs_share_dir, 'launch', 'mirs.launch.py')
+            os.path.join(mirs_share_dir, 'launch', 'mirs_hardware.launch.py')
         ),
-        #launch_arguments={'use_ekf_global': 'false'}.items()
+        launch_arguments={
+            'esp_port': LaunchConfiguration('esp_port'),
+            'lidar_port': LaunchConfiguration('lidar_port'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'enable_ekf_local': 'true',
+        }.items()
     )
 
-    # 5. Nav2 の設定ファイル（mirsパッケージのものを使用）
+    # Nav2 の設定ファイル（mirsパッケージのものを使用）
     nav2_params_file = os.path.join(
-        mirs_share_dir, 'config', 'nav2_params.yaml'
+        mirs_share_dir, 'config', 'navigation', 'nav2_params.yaml'
     )
 
-    # 6. Rviz の設定ファイル（Nav2標準のものを使用）
+    # Rviz の設定ファイル（Nav2標準のものを使用）
     rviz_config_file = os.path.join(
         nav2_bringup_dir, 'rviz', 'nav2_default_view.rviz'
     )
 
-    # 7. Nav2 スタック本体の起動
+    # Nav2 スタック本体の起動
     nav2_bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_bringup_dir, 'launch', 'bringup_launch.py')
@@ -64,7 +76,7 @@ def generate_launch_description():
         }.items()
     )
 
-    # 8. Rviz の起動
+    # Rviz の起動
     rviz_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_bringup_dir, 'launch', 'rviz_launch.py')
@@ -75,12 +87,14 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('use_rviz'))
     )
 
-    # 9. 起動するものをリストにして返す
+    # 起動するものをリストにして返す
     return LaunchDescription([
         map_yaml_file,         # マップ引数
         use_rviz,              # RViz起動フラグ
         use_sim_time,          # シミュレーション時間フラグ
-        mirs_hardware_launch,  # MIRS本体 (T1の代わり)
-        nav2_bringup_launch,   # Nav2本体 (T2の代わり)
-        rviz_node,              # Rviz (T3の代わり)
+        esp_port,
+        lidar_port,
+        mirs_hardware_launch,  # MIRS本体
+        nav2_bringup_launch,   # Nav2本体
+        rviz_node,              # Rviz
     ])

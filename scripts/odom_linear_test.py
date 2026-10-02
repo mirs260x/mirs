@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""オドメトリ直進精度の手動テストノード（3m前進して停止）。"""
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -7,6 +8,7 @@ import math
 import time
 
 class OdomLinearTest(Node):
+    """P制御で目標距離だけ前進するテストノード。"""
     def __init__(self):
         super().__init__('odom_linear_test')
         

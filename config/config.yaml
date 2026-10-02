@@ -1,19 +1,12 @@
-odometry_publisher:
-  ros__parameters:
-    # オドメトリ計算に必要な物理パラメータ
-    wheel_radius: 0.0391
-    wheel_base: 0.39
-    count_per_rev: 4096.0
-
 parameter_publisher:
   ros__parameters:
-    # ESP32に渡すためのパラメータ
+    # ESP32に渡すためのパラメータ (ESP32既定値と一致させること)
     wheel_radius: 0.0391
     wheel_base: 0.39
-    
-    rkp : 60.0
-    rki : 30.0
-    rkd : 10.0
-    lkp : 60.0
-    lki : 30.0
-    lkd : 10.0
+
+    rkp: 40.0
+    rki: 150.0
+    rkd: 0.4
+    lkp: 40.0
+    lki: 150.0
+    lkd: 0.4
