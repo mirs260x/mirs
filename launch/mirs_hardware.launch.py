@@ -123,7 +123,11 @@ def generate_launch_description():
 
     static_odom_tf_node = static_tf_node(
         'static_transform_publisher_odom_base_link',
-        ['0', '0', '0', '0', '0', '0', 'odom', 'base_link'],
+        # EKF代替のデバッグ用。base_footprint経由に統一すること。
+        # odom->base_linkにするとbase_footprint->base_linkと合わせて
+        # base_linkが二重親になりTFツリーが分断されるため、
+        # odom->base_footprintで出す(EKFの出力フレームと同一)。
+        ['0', '0', '0', '0', '0', '0', 'odom', 'base_footprint'],
         IfCondition(LaunchConfiguration('enable_static_odom_tf')),
     )
 
