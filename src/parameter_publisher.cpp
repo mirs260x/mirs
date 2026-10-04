@@ -15,9 +15,9 @@ public:
     ParameterPublisher()
         : Node("parameter_publisher")
     {
-        // パラメータを宣言
-        this->declare_parameter("wheel_radius", 0.04);
-        this->declare_parameter("wheel_base", 0.38);
+        // パラメータを宣言（既定値はconfig.yamlと同一に保つこと。単一真実はyaml）
+        this->declare_parameter("wheel_radius", 0.0391);
+        this->declare_parameter("wheel_base", 0.39);
         this->declare_parameter("rkp", 40.0);
         this->declare_parameter("rki", 150.0);
         this->declare_parameter("rkd", 0.4);

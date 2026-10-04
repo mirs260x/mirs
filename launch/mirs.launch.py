@@ -1,7 +1,7 @@
 """mirs.launch.py: 後方互換プリセット.
 
-実体は mirs_hardware.launch.py に集約. 旧来の `ros2 launch mirs mirs.launch.py`
-呼び出しが壊れないよう委譲する.
+実体は mirs_hardware.launch.py に集約. `ros2 launch mirs mirs.launch.py`
+呼び出しの後方互換のために委譲する.
 
 基本方針 (静的TF運用・差動二輪):
 - EKF local は有効 (odom->base_footprint)
@@ -38,6 +38,9 @@ def generate_launch_description():
     enable_static_footprint_tf = DeclareLaunchArgument(
         'enable_static_footprint_tf', default_value='true',
         description='Publish static base_footprint->base_link.')
+    enable_static_imu_tf = DeclareLaunchArgument(
+        'enable_static_imu_tf', default_value='true',
+        description='Publish static base_link->imu_link.')
     enable_lidar = DeclareLaunchArgument(
         'enable_lidar', default_value='true',
         description='Enable LiDAR driver.')
@@ -60,6 +63,7 @@ def generate_launch_description():
             'enable_static_odom_tf': LaunchConfiguration('enable_static_odom_tf'),
             'enable_static_laser_tf': LaunchConfiguration('enable_static_laser_tf'),
             'enable_static_footprint_tf': LaunchConfiguration('enable_static_footprint_tf'),
+            'enable_static_imu_tf': LaunchConfiguration('enable_static_imu_tf'),
         }.items(),
     )
 
@@ -70,6 +74,7 @@ def generate_launch_description():
     ld.add_action(enable_static_laser_tf)
     ld.add_action(enable_static_odom_tf)
     ld.add_action(enable_static_footprint_tf)
+    ld.add_action(enable_static_imu_tf)
     ld.add_action(enable_lidar)
     ld.add_action(enable_micro_ros)
     ld.add_action(hardware)

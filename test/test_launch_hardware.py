@@ -43,7 +43,7 @@ def test_hardware_declares_expected_args():
                      "enable_parameter_publisher", "enable_micro_ros",
                      "enable_ekf_local", "ekf_config_file",
                      "enable_static_odom_tf", "enable_static_laser_tf",
-                     "enable_static_footprint_tf"]:
+                     "enable_static_footprint_tf", "enable_static_imu_tf"]:
         assert expected in args, f"missing arg: {expected}"
     assert "enable_odometry" not in args, "odometry calc moved to ESP32"
     for removed in ["enable_robot_state_publisher", "urdf", "urdf_file"]:
@@ -70,6 +70,18 @@ def test_hardware_defaults_are_safe():
     # 静的laser/footprint TFのz値が変わっていないこと
     assert "0.1745" in src
     assert "0.242" in src
+
+
+def test_imu_static_tf_present_and_enabled():
+    # /imu/data_raw の frame_id=imu_link をTFツリーに接続する。
+    # robot_localization がセンサフレーム変換に使うため既定true。
+    src = HARDWARE.read_text()
+    assert "imu_link" in src, "imu_link TF missing"
+    assert "base_link" in src
+    idx = src.find("'enable_static_imu_tf'")
+    assert idx != -1, "missing arg: enable_static_imu_tf"
+    window = src[idx:idx + 400].replace('"', "'").replace(" ", "")
+    assert "default_value='true'" in window
 
 
 def test_uppers_include_hardware_directly_with_forwarding():

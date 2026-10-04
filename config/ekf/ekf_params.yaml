@@ -4,21 +4,36 @@ ekf_filter_node_local:
     two_d_mode: true
     publish_tf: true
 
-    # ランドマーク（地図）を使うので、map座標系を有効
     map_frame: map
     odom_frame: odom
     base_link_frame: base_footprint
-    world_frame: odom      #ekfの出力をodomにする
+    world_frame: odom      # EKFの出力をodomにする
 
-    # --- 入力1: エンコーダー (足回り) ---
-    # 役割: 短い時間の滑らかな移動を担当
+    # --- 入力1: ESP32オドメトリ (/odom) ---
+    # 差動二輪のためvyは常に0。位置(x,y)はEKFが速度から積分するため使わない。
+    # vxとvyawのみ使用する。
     odom0: /odom
-    odom0_config: [false, false, false,
-                   false, false, false,
-                   true,  true,  false,   # vx, vy (移動速度)
-                   false, false, true,    # vyaw (旋回速度)
+    odom0_config: [false, false, false,  # x, y, z
+                   false, false, false,  # roll, pitch, yaw
+                   true,  false, false,  # vx（差動二輪のためvyは除外）
+                   false, false, true,   # vyaw
                    false, false, false]
     odom0_differential: false
     odom0_relative: false
 
-    # --- 入力2: 削除 (Local EKFはエンコーダのみで滑らかさを重視) ---
+    # --- 入力2: IMU (/imu/data_raw) ---
+    # two_d_mode:true のため roll/pitch は無視される。
+    # orientation は orientation_covariance[0]=-1 のため EKF が棄却する。
+    # angular_velocity.z (vyaw) のみ融合する。
+    # 注意: ESP32側EKF有効化時(ENABLE_EKF=1)は /odom 自体がフィルタ済みに
+    # なるため、本imu0は二重計上になる。外すか共分散を緩めて再調整すること。
+    # 現状(ENABLE_EKF=0)はこのまま。
+    imu0: /imu/data_raw
+    imu0_config: [false, false, false,  # x, y, z
+                  false, false, false,  # roll, pitch, yaw（orientation未推定のため除外）
+                  false, false, false,  # vx, vy, vz
+                  false, false, true,   # vyaw（ジャイロz軸）
+                  false, false, false]  # ax, ay, az
+    imu0_differential: false
+    imu0_relative: false
+    imu0_remove_gravitational_acceleration: false
