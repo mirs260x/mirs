@@ -60,6 +60,14 @@ def _norm(src):
     return re.sub(r"\s+", "", s)
 
 
+def test_nav_launch_overrides_coverage_plugin():
+    # nav単体にはcoverage_serverが居ないため、coverageナビゲータ実体を
+    # 標準ToPoseに差し替える（productionは素のparams）。後退検出用。
+    nav = _norm((LAUNCH / "nav.launch.py").read_text())
+    assert "navigate_complete_coverage.plugin" in nav
+    assert "nav2_bt_navigator::NavigateToPoseNavigator" in nav
+
+
 def test_nav2_rviz_map_paths_are_correct():
     # 既知の誤パス回帰防止: 正しいサブディレクトリを参照していること
     nav = _norm((LAUNCH / "nav.launch.py").read_text())

@@ -173,9 +173,17 @@ ros2 launch mirs slam.launch.py
 コントローラでロボットを動かしながら地図を作成します。移動中は RViz2 上でもロボットが動いていることを確認してください（地図作成には LiDAR だけでなくエンコーダの接続が必要です）。
 
 地図ができたら、以下のコマンドで保存してください。`<マップ名>` は保存したいファイル名に置き換えてください。
+mirsパッケージのmaps/（`src/original/mirs/maps/`）に保存されます。
+slam_toolbox の `/map` は Durability `Transient Local` で配信されるため、
+関数内で `map_subscribe_transient_local:=true` を付けています。
 
 ```bash
-ros2 run nav2_map_server map_saver_cli -f <保存先パス>/<マップ名>
+# /map が出ていることを先に確認（Hzが出なければSLAM側の問題）
+ros2 topic info /map -v
+ros2 topic hz /map
+
+# 保存（maps/<マップ名>.pgm/.yaml が作られる）
+savemap <マップ名>
 ```
 
 作成した地図をそのまま使うと正常に動作しないことがあります。ペイントアプリ等で、点のまばらな箇所を塗りつぶす、足跡を壁として誤認識した箇所を白く塗りつぶすなどの後処理を行うとよいです。

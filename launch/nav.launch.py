@@ -6,6 +6,7 @@ from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from nav2_common.launch import RewrittenYaml
 
 def generate_launch_description():
 
@@ -58,6 +59,19 @@ def generate_launch_description():
         mirs_share_dir, 'config', 'navigation', 'nav2_params.yaml'
     )
 
+    # nav単体にはcoverage_serverが居ないため、coverageナビゲータの実体を
+    # 標準ToPoseに差し替える。production.launch.pyは素のparamsを使いcoverageのまま。
+    # 文字列書換えのみ（RewrittenYamlはlistを扱えないためplugin指定だけ変える）。
+    # nav単体でCompleteCoverageゴールを送るとToPose動作になる点に注意。
+    nav_only_params = RewrittenYaml(
+        source_file=nav2_params_file,
+        param_rewrites={
+            'bt_navigator.ros__parameters.navigate_complete_coverage.plugin':
+                'nav2_bt_navigator::NavigateToPoseNavigator',
+        },
+        convert_types=True,
+    )
+
     # Rviz の設定ファイル（Nav2標準のものを使用）
     rviz_config_file = os.path.join(
         nav2_bringup_dir, 'rviz', 'nav2_default_view.rviz'
@@ -72,7 +86,7 @@ def generate_launch_description():
         launch_arguments={
             'map': LaunchConfiguration('map'), # 引数で指定されたマップを使用
             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            'params_file': nav2_params_file,   # Nav2の設定ファイルを指定
+            'params_file': nav_only_params,   # coverage差替え済み（上記）
         }.items()
     )
 
