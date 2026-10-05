@@ -14,13 +14,20 @@ def generate_launch_description():
     # パッケージの 'share' ディレクトリへのパスを取得
     mirs_share_dir = get_package_share_directory('mirs')
 
-    # --- 1. ハードウェア起動 (mirs_hardware.launch.pyを直接Include) ---
+    # ハードウェア起動 (mirs_hardware.launch.pyを直接Include)
     esp_port = DeclareLaunchArgument(
         'esp_port', default_value='/dev/ttyUSB1',
         description='Set esp32 usb port.')
     lidar_port = DeclareLaunchArgument(
         'lidar_port', default_value='/dev/ttyUSB0',
         description='Set lidar usb port.')
+    lidar_baudrate = DeclareLaunchArgument(
+        'lidar_baudrate', default_value='256000',
+        description='LiDAR baudrate.')
+    ekf_config_file = DeclareLaunchArgument(
+        'ekf_config_file',
+        default_value=os.path.join(mirs_share_dir, 'config', 'ekf', 'ekf_params.yaml'),
+        description='EKF config file.')
     use_sim_time_arg = DeclareLaunchArgument(
         'use_sim_time', default_value='false',
         description='Use simulated clock if true.')
@@ -32,6 +39,8 @@ def generate_launch_description():
         launch_arguments={
             'esp_port': LaunchConfiguration('esp_port'),
             'lidar_port': LaunchConfiguration('lidar_port'),
+            'lidar_baudrate': LaunchConfiguration('lidar_baudrate'),
+            'ekf_config_file': LaunchConfiguration('ekf_config_file'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'enable_ekf_local': 'true',
         }.items()
@@ -43,7 +52,7 @@ def generate_launch_description():
         description='Whether to start RViz'
     )
 
-    # --- 2. SLAM (slam_toolbox) の設定 ---
+    # SLAM (slam_toolbox) の設定
     slam_config_file = LaunchConfiguration('slam_config_file')
     declare_arg_slam_config_file = DeclareLaunchArgument(
         'slam_config_file',
@@ -54,7 +63,7 @@ def generate_launch_description():
             'slam_toolbox_config.yaml')
     )
 
-    # slam_toolbox ノードの定義
+    # slam_toolbox の起動
     slam_toolbox_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -71,7 +80,7 @@ def generate_launch_description():
     )
  
 
-    # --- 3. Rviz の設定 ---
+    # Rviz の設定
     rviz2_file = LaunchConfiguration('rviz2_file')
     declare_arg_rviz2_config_path = DeclareLaunchArgument(
         'rviz2_file', 
@@ -82,7 +91,7 @@ def generate_launch_description():
             'default.rviz')
     )
 
-    # Rviz ノードの定義
+    # Rviz の起動
     rviz2_node = Node(
         name='rviz2',
         package='rviz2', 
@@ -100,6 +109,8 @@ def generate_launch_description():
     
     ld.add_action(esp_port)
     ld.add_action(lidar_port)
+    ld.add_action(lidar_baudrate)
+    ld.add_action(ekf_config_file)
     ld.add_action(use_sim_time_arg)
     ld.add_action(declare_arg_slam_config_file)
     ld.add_action(declare_arg_rviz2_config_path)

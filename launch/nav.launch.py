@@ -14,8 +14,8 @@ def generate_launch_description():
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
 
     # --- 引数の定義 ---
-    # マップファイルのデフォルトパス (パッケージ内の maps/rouka7.yaml)
-    default_map_path = os.path.join(mirs_share_dir, 'maps', 'rouka7.yaml')
+    # マップファイルのデフォルトパス (パッケージ内の maps/gakuseigenkan.yaml)
+    default_map_path = os.path.join(mirs_share_dir, 'maps', 'gakuseigenkan.yaml')
     
     map_yaml_file = DeclareLaunchArgument(
         'map',
@@ -40,6 +40,13 @@ def generate_launch_description():
     lidar_port = DeclareLaunchArgument(
         'lidar_port', default_value='/dev/ttyUSB0',
         description='Set lidar usb port.')
+    lidar_baudrate = DeclareLaunchArgument(
+        'lidar_baudrate', default_value='256000',
+        description='LiDAR baudrate.')
+    ekf_config_file = DeclareLaunchArgument(
+        'ekf_config_file',
+        default_value=os.path.join(mirs_share_dir, 'config', 'ekf', 'ekf_params.yaml'),
+        description='EKF config file.')
 
     # MIRS本体のハードウェア (mirs_hardware.launch.pyを直接Include)
     mirs_hardware_launch = IncludeLaunchDescription(
@@ -49,6 +56,8 @@ def generate_launch_description():
         launch_arguments={
             'esp_port': LaunchConfiguration('esp_port'),
             'lidar_port': LaunchConfiguration('lidar_port'),
+            'lidar_baudrate': LaunchConfiguration('lidar_baudrate'),
+            'ekf_config_file': LaunchConfiguration('ekf_config_file'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'enable_ekf_local': 'true',
         }.items()
@@ -108,6 +117,8 @@ def generate_launch_description():
         use_sim_time,          # シミュレーション時間フラグ
         esp_port,
         lidar_port,
+        lidar_baudrate,
+        ekf_config_file,
         mirs_hardware_launch,  # MIRS本体
         nav2_bringup_launch,   # Nav2本体
         rviz_node,              # Rviz

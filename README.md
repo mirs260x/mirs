@@ -75,16 +75,19 @@ ros2 launch mirs mirs.launch.py \
 ### 2. ワークスペースの作成とリポジトリのクローン
 
 ```bash
-mkdir -p mirs_workspace/src
-cd mirs_workspace/src
+mkdir -p mirs_workspace/src/original mirs_workspace/src/thirdparty
+cd mirs_workspace/src/original
 
 # mirs パッケージを使う場合に必要な一式
 # 使用する ROS 2 ディストリビューションに応じて jazzy/humble を適宜読み替えてください
 git clone https://github.com/mirs260x/mirs.git
+# 他の自前パッケージ（mirs_msgs 等）も src/original に配置する
+
+cd ../thirdparty
 git clone -b jazzy https://github.com/micro-ROS/micro-ROS-Agent.git
 git clone https://github.com/Slamtec/sllidar_ros2.git
 
-cd ..
+cd ../..
 ```
 
 ### 3. ビルド
@@ -116,7 +119,7 @@ LiDAR が回転していること、ターミナル上で ESP32 との通信が�
 
 別のターミナルからコンテナに入り、エンコーダ値・オドメトリ値・走行試験などが正常か確認します。
 
-PID 値の設定ファイル: `mirs_workspace/src/mirs/config/config.yaml`
+PID 値の設定ファイル: `mirs_workspace/src/original/mirs/config/config.yaml`
 
 ```bash
 # 前進（0.2 m/s）
@@ -245,8 +248,9 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 | 名前 | 親 | 発行元 | 説明 |
 |---|---|---|---|
 | `odom` | `map`（SLAM/Nav2時） | EKF（`robot_localization`） | オドメトリ原点 |
-| `base_link` | `odom` | EKF | 機体中心 |
-| `base_footprint` | `odom` | EKF（`robot_localization`） | 地面投影（`base_link` の親） |
+| `base_footprint` | `odom` | EKF（`robot_localization`） | 地面投影 |
+| `base_link` | `base_footprint` | 静的TF | 機体中心 |
+| `imu_link` | `base_link` | 静的TF | IMU取付位置（xyzは実測後に更新） |
 | `laser` | `base_link` | 静的TF | LiDAR取付位置 |
 
 ### パラメータ（`config/config.yaml`）
