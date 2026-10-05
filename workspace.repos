@@ -1,0 +1,53 @@
+# MIRS workspace manifest (vcstool形式)
+#
+# 使い方（ワークスペースルート `ws/` で実行。要 vcstool: `pip install vcstool`）:
+#   vcs import src < src/original/mirs/workspace.repos
+#   rosdep install --from-path src --ignore-src -r -y
+#   colcon build --symlink-install
+#
+# AIエージェント向け: このファイル1つで全リポジトリ・配置・版が復元できる。
+# 先に本ファイルだけ取得すること（例: mirsリポジトリをclone）。
+# 注意:
+# - mirs2605/org の2件は非公開のため SSH（git@github.com）の鍵認証が必要。
+#   HTTPSでは取得できない。
+# - 版は各リポジトリの既定ブランチ（動作確認済みの組合せは各repoの履歴を参照）。
+#   非既定ブランチを使うものだけ明記している（jazzy / jazzy-v2）。
+# - ESP32ファームウェア（mirs_esp_pio）は本workspace外のため対象外。
+#   別途 https://github.com/mirs260x/mirs_esp_pio.git を取得すること。
+repositories:
+  src/original/mirs:
+    type: git
+    url: https://github.com/mirs260x/mirs.git
+    version: main
+  src/original/mirs_msgs:
+    type: git
+    url: https://github.com/mirs260x/mirs_msgs.git
+    version: main
+  src/original/ble_server:
+    type: git
+    url: git@github.com:mirs2605/ble_server.git
+    version: main
+  src/original/coverage:
+    type: git
+    url: git@github.com:mirs2605/coverage.git
+    version: main
+  src/thirdparty/micro-ROS-Agent:
+    type: git
+    url: https://github.com/micro-ROS/micro-ROS-Agent.git
+    version: jazzy
+  src/thirdparty/micro_ros_msgs:
+    type: git
+    url: https://github.com/micro-ROS/micro_ros_msgs.git
+    version: jazzy
+  src/thirdparty/sllidar_ros2:
+    type: git
+    url: https://github.com/Slamtec/sllidar_ros2.git
+    version: main
+  src/thirdparty/opennav_coverage:
+    type: git
+    url: https://github.com/open-navigation/opennav_coverage.git
+    version: jazzy-v2
+  src/thirdparty/Fields2Cover:
+    type: git
+    url: https://github.com/Fields2Cover/Fields2Cover.git
+    version: main
