@@ -53,7 +53,9 @@ bt_navigator:
     use_sim_time: False
     global_frame: map
     robot_base_frame: base_footprint
-    odom_topic: /odom
+    # フィルタ済み姿勢はTF(odom->base_footprint)経由で使うため、生/odomのまま維持する。
+    # velocity_smootherはOPEN_LOOPのためodom_topic不使用。結論記録: ws/TODO.md §4.4。
+    odom_topic: "/odom"
     bt_loop_duration: 10
     default_server_timeout: 20
     wait_for_service_timeout: 1000
@@ -377,7 +379,8 @@ velocity_smoother:
     min_velocity: [-0.1, 0.0, -0.2]
     max_accel: [0.1, 0.0, 0.2]
     max_decel: [-0.1, 0.0, -0.2]
-    odom_topic: "odom"
+    # OPEN_LOOPのためodom_topicは不使用。TFのフィルタ済み姿勢で動作する。
+    odom_topic: "/odom"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0

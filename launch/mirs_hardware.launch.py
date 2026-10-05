@@ -65,6 +65,12 @@ def generate_launch_description():
     enable_static_footprint_tf = DeclareLaunchArgument(
         'enable_static_footprint_tf', default_value='true',
         description='Publish static base_footprint->base_link.')
+    # base_link->imu_linkの静的TF。/imu/data_raw の frame_id。
+    # robot_localization がセンサフレーム変換に使うため必須。
+    # xyzは実測後に更新すること（回転はBMX055が基板と同向きの前提）。
+    enable_static_imu_tf = DeclareLaunchArgument(
+        'enable_static_imu_tf', default_value='true',
+        description='Publish static base_link->imu_link.')
 
     config_file_path = os.path.join(pkg_share, 'config', 'config.yaml')
 
@@ -149,19 +155,28 @@ def generate_launch_description():
         IfCondition(LaunchConfiguration('enable_static_footprint_tf')),
     )
 
+    static_imu_tf_node = static_tf_node(
+        'static_transform_publisher_base_imu',
+        # IMU搭載位置の実測値に置換すること。現状は原点仮置き。
+        ['--x', '0', '--y', '0', '--z', '0.05',
+         '--roll', '0', '--pitch', '0', '--yaw', '0',
+         '--frame-id', 'base_link', '--child-frame-id', 'imu_link'],
+        IfCondition(LaunchConfiguration('enable_static_imu_tf')),
+    )
+
     ld = LaunchDescription()
     for a in (esp_port, lidar_port, lidar_baudrate, use_sim_time,
-              enable_lidar, enable_parameter_publisher,
-              enable_micro_ros,
-              enable_ekf_local, ekf_config_file,
-              enable_static_odom_tf, enable_static_laser_tf,
-              enable_static_footprint_tf):
+               enable_lidar, enable_parameter_publisher,
+               enable_micro_ros,
+               enable_ekf_local, ekf_config_file,
+               enable_static_odom_tf, enable_static_laser_tf,
+               enable_static_footprint_tf, enable_static_imu_tf):
         ld.add_action(a)
 
     for n in (parameter_node, micro_ros, sllidar_launch,
-              ekf_node_local,
-              static_odom_tf_node, static_laser_tf_node,
-              static_footprint_tf_node):
+               ekf_node_local,
+               static_odom_tf_node, static_laser_tf_node,
+               static_footprint_tf_node, static_imu_tf_node):
         ld.add_action(n)
 
     return ld
