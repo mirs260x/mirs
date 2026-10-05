@@ -13,20 +13,30 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
+  <depend>rclpy</depend>
   <depend>mirs_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
   <exec_depend>robot_localization</exec_depend>
   <exec_depend>diagnostic_updater</exec_depend>
-  <exec_depend>rclpy</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_common</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
   <exec_depend>micro_ros_agent</exec_depend>
   <exec_depend>sllidar_ros2</exec_depend>
 
   <exec_depend>dwb_core</exec_depend>
   <exec_depend>dwb_msgs</exec_depend>
-  <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>tf_transformations</exec_depend>
+  <!-- nav2_params.yaml が opennav_coverage を参照するため実行時に必要 -->
+  <exec_depend>opennav_coverage</exec_depend>
+  <exec_depend>opennav_coverage_navigator</exec_depend>
+  <exec_depend>opennav_coverage_bt</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
