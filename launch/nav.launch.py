@@ -15,7 +15,7 @@ def generate_launch_description():
 
     # --- 引数の定義 ---
     # マップファイルのデフォルトパス (パッケージ内の maps/gakuseigenkan.yaml)
-    default_map_path = os.path.join(mirs_share_dir, 'maps', 'gakuseigenkan.yaml')
+    default_map_path = os.path.join(mirs_share_dir, 'maps', 'es.yaml')
     
     map_yaml_file = DeclareLaunchArgument(
         'map',

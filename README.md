@@ -22,6 +22,7 @@ docker(仮想環境)を使うか生環境を使うか選ぶことができます
 
 ESP32 と LiDAR を、LiDAR → ESP32 の順に PC へUSB接続してください。
 ESP32には事前にmirs_espもしくはmirs_esp_pioを送信しておいてください。
+実機へ書き込む前に、ピン割り当て、エンコーダ、車輪径、トレッド幅、モーター出力、非常停止、バッテリー監視の設定を確認してください。
 
 #### micro-ROSの接続方法
 
@@ -97,21 +98,42 @@ ros2 launch mirs mirs.launch.py \
 
 ### 2. ワークスペースの作成とリポジトリのクローン
 
+方法A（推奨。人手・AI共通）：マニフェストから一括取得する。
+
+```bash
+mkdir -p mirs_workspace && cd mirs_workspace
+git clone https://github.com/mirs260x/mirs.git src/original/mirs
+vcs import src < src/original/mirs/workspace.repos  # 要 vcstool（pip install vcstool）
+```
+
+`workspace.repos` に全リポジトリ・配置・版が書かれている。AIエージェントに構築させる場合も、
+このファイルと各リポジトリのURLだけ渡せばよい。mirs2605/org の2件は非公開のため
+SSHの鍵認証が必要（HTTPSでは取得できない）。
+
+方法B（手動）：1件ずつcloneする。
+
 ```bash
 mkdir -p mirs_workspace/src/original mirs_workspace/src/thirdparty
 cd mirs_workspace/src/original
 
-# mirs パッケージを使う場合に必要な一式
+# 自前パッケージ一式
 # 使用する ROS 2 ディストリビューションに応じて jazzy/humble を適宜読み替えてください
 git clone https://github.com/mirs260x/mirs.git
-# 他の自前パッケージ（mirs_msgs 等）も src/original に配置する
+git clone https://github.com/mirs260x/mirs_msgs.git
+git clone https://github.com/mirs2605/ble_server.git
+git clone https://github.com/mirs2605/coverage.git
 
 cd ../thirdparty
 git clone -b jazzy https://github.com/micro-ROS/micro-ROS-Agent.git
 git clone https://github.com/Slamtec/sllidar_ros2.git
+git clone -b jazzy-v2 https://github.com/open-navigation/opennav_coverage.git
+git clone https://github.com/Fields2Cover/Fields2Cover.git
 
 cd ../..
 ```
+
+Nav2本体（`nav2_bringup` 等）は `package.xml` の依存宣言により次の `rosdep install` で入ります。
+`opennav_coverage` と `Fields2Cover` はソース配置が必要です（版は上記どおり）。
 
 ### 3. ビルド
 
@@ -219,7 +241,7 @@ savemap <マップ名>
 保存したマップを使って、スタート地点とゴール地点を定めて自律走行させることができます。
 
 ```bash
-# 起動時にデフォルトのマップパスを使う場合（launch ファイル内の default_map_path を変更）
+# 既定マップ（gakuseigenkan.yaml）で起動する場合
 ros2 launch mirs nav.launch.py
 
 # コマンドラインでマップを指定する場合
@@ -238,7 +260,18 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 2. 地図上で行きたい位置・向きをクリック＆ドラッグして指定
 3. 経路（グローバルパス／ローカルパス）が表示され、ロボットが自律的に走行を開始する
 
-実機へ書き込む前に、ピン割り当て、エンコーダ、車輪径、トレッド幅、モーター出力、非常停止、バッテリー監視の設定を確認してください。
+### 本番一発起動（Nav2＋coverage＋BLE）
+
+清掃範囲の自動走行まで行う場合は `coverage` パッケージの本番launchを使います。
+詳細は [`coverage/README.md`](../coverage/README.md) を参照してください。
+
+```bash
+# RVizなし・BLEなしの手動テスト構成
+ros2 launch coverage production.launch.py use_rviz:=false enable_ble:=false
+```
+
+BLE実機なしで起動する場合は `enable_ble:=false` が必須です（GATT不在では
+`ble_receiver_node` が即死します）。清掃範囲は `/cleaning_zone` への投入で与えます。
 
 ## API リファレンス（安定インターフェース）
 

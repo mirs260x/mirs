@@ -89,3 +89,21 @@ def test_maps_have_pgms():
         cfg = yaml.safe_load(yf.read_text())
         assert (ROOT / "maps" / cfg["image"]).exists(), f"{yf}: image missing"
         assert cfg["resolution"] > 0
+
+
+def test_workspace_manifest_valid():
+    # AI/自動構築用のマニフェスト。URL・配置・版の過不足を検出する（通信なし）。
+    # 版の存在確認（ls-remote）はマニフェスト更新時に手動で行うこと。
+    repos = yaml.safe_load((ROOT / "workspace.repos").read_text())["repositories"]
+    expected = {
+        "src/original/mirs", "src/original/mirs_msgs",
+        "src/original/ble_server", "src/original/coverage",
+        "src/thirdparty/micro-ROS-Agent", "src/thirdparty/micro_ros_msgs",
+        "src/thirdparty/sllidar_ros2", "src/thirdparty/opennav_coverage",
+        "src/thirdparty/Fields2Cover",
+    }
+    assert set(repos) == expected, f"manifest mismatch: {set(repos) ^ expected}"
+    for path, spec in repos.items():
+        assert spec["type"] == "git", path
+        assert spec["url"].startswith(("https://github.com/", "git@github.com:")), path
+        assert spec["version"], path
