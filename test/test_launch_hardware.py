@@ -10,7 +10,7 @@ from pathlib import Path
 
 LAUNCH = Path("launch")
 HARDWARE = LAUNCH / "mirs_hardware.launch.py"
-UPPERS = ["slam.launch.py", "nav.launch.py"]
+UPPERS = ["mirs.launch.py", "slam.launch.py", "nav.launch.py"]
 DELETED = ["mirs_minimum.launch.py", "mirs_odom_only.launch.py",
            "system_bringup.launch.py", "system_bringup_odom_only.launch.py"]
 
@@ -38,7 +38,7 @@ def _declare_args(src):
 
 def test_hardware_declares_expected_args():
     args = _declare_args(HARDWARE.read_text())
-    for expected in ["esp_port", "lidar_port", "use_sim_time",
+    for expected in ["esp_port", "esp_baudrate", "lidar_port", "use_sim_time",
                      "enable_lidar",
                      "enable_parameter_publisher", "enable_micro_ros",
                      "enable_ekf_local", "ekf_config_file",
@@ -72,6 +72,13 @@ def test_hardware_defaults_are_safe():
     assert "0.242" in src
 
 
+def test_micro_ros_agent_uses_configured_serial_device_and_baudrate():
+    src = HARDWARE.read_text()
+    assert "'--dev', LaunchConfiguration('esp_port')" in src
+    assert "'-b', LaunchConfiguration('esp_baudrate')" in src
+    assert "'esp_baudrate', default_value='115200'" in src
+
+
 def test_imu_static_tf_present_and_enabled():
     # /imu/data_raw の frame_id=imu_link をTFツリーに接続する。
     # robot_localization がセンサフレーム変換に使うため既定true。
@@ -88,7 +95,7 @@ def test_uppers_include_hardware_directly_with_forwarding():
     for name in UPPERS:
         src = _src(name)
         assert "mirs_hardware.launch.py" in src, f"{name} must include hardware"
-        for key in ["esp_port", "lidar_port", "use_sim_time"]:
+        for key in ["esp_port", "esp_baudrate", "lidar_port", "use_sim_time"]:
             assert key in src, f"{name} must forward {key}"
 
 
