@@ -24,7 +24,10 @@ def generate_launch_description():
     # --- 引数 ---
     esp_port = DeclareLaunchArgument(
         'esp_port', default_value='/dev/ttyUSB1',
-        description='ESP32 USB port.')
+        description='ESP32 micro-ROS serial device (USB or UART).')
+    esp_baudrate = DeclareLaunchArgument(
+        'esp_baudrate', default_value='115200',
+        description='ESP32 micro-ROS serial baudrate.')
     lidar_port = DeclareLaunchArgument(
         'lidar_port', default_value='/dev/ttyUSB0',
         description='LiDAR USB port.')
@@ -89,7 +92,10 @@ def generate_launch_description():
         executable='micro_ros_agent',
         name='micro_ros_agent',
         output='screen',
-        arguments=['serial', '--dev', LaunchConfiguration('esp_port'), '-v6'],
+        arguments=[
+            'serial', '--dev', LaunchConfiguration('esp_port'),
+            '-b', LaunchConfiguration('esp_baudrate'), '-v6',
+        ],
         condition=IfCondition(LaunchConfiguration('enable_micro_ros')),
     )
 
@@ -165,7 +171,7 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
-    for a in (esp_port, lidar_port, lidar_baudrate, use_sim_time,
+    for a in (esp_port, esp_baudrate, lidar_port, lidar_baudrate, use_sim_time,
                enable_lidar, enable_parameter_publisher,
                enable_micro_ros,
                enable_ekf_local, ekf_config_file,

@@ -20,8 +20,31 @@ docker(仮想環境)を使うか生環境を使うか選ぶことができます
 
 ### 1. ESP32 と LiDAR の準備
 
-ESP32 と LiDAR を、LiDAR → ESP32 の順に PC へ接続してください。
+ESP32 と LiDAR を、LiDAR → ESP32 の順に PC へUSB接続してください。
 ESP32には事前にmirs_espもしくはmirs_esp_pioを送信しておいてください。
+
+#### micro-ROSの接続方法
+
+micro-ROS Agent はUSBシリアルとRaspberry PiのGPIO UARTのどちらでも接続できます。
+ファームウェア書き込みはUSBを使用し、Piとの実行時micro-ROS通信だけをGPIO UARTにする場合は、
+ESP32のUARTピンをPiのUARTピンに接続し、launch引数 `esp_port` でPi側のデバイスを指定します。
+この設定はPi側Agentのポートとボーレートを選ぶものです。ESP32側ファームウェアも同じUARTピンと
+ボーレートでmicro-ROSを初期化する必要があります（ファームウェアのUART設定は別途行ってください）。
+
+Pi側でシリアルポートを有効化し、ログインシェルをシリアルへ出さない設定にしてください
+（`raspi-config` の Interface Options → Serial Port で設定）。設定後、必要ならPiを再起動します。
+配線はPi TX → ESP32 RX、Pi RX ← ESP32 TX、GND共通です。両方のUARTは3.3Vです。
+PiのGPIOへ5V信号を接続しないでください。
+
+```bash
+# Pi GPIO UART（通常 /dev/serial0）、ESP32 micro-ROS側は115200 baud
+ros2 launch mirs mirs.launch.py \
+  esp_port:=/dev/serial0 esp_baudrate:=115200
+```
+
+`esp_port` と `esp_baudrate` は `slam.launch.py`、`nav.launch.py`、
+`mirs_hardware.launch.py` でも指定できます。UARTを使わずUSB接続する場合は、
+既定の `esp_port:=/dev/ttyUSB1` のまま起動できます。
 
 #### USBポート番号の考え方
 
@@ -263,7 +286,8 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 
 | 引数 | 既定値 | 説明 |
 |---|---|---|
-| `esp_port` | `/dev/ttyUSB1` | ESP32のUSBポート |
+| `esp_port` | `/dev/ttyUSB1` | ESP32 micro-ROSのシリアルデバイス（USBまたはUART） |
+| `esp_baudrate` | `115200` | ESP32 micro-ROSのシリアルボーレート |
 | `lidar_port` | `/dev/ttyUSB0` | LiDARのUSBポート |
 | `lidar_baudrate` | `256000` | LiDARボーレート |
 | `use_sim_time` | `false` | シミュレーション時刻 |
@@ -284,6 +308,7 @@ IncludeLaunchDescription(
         os.path.join(get_package_share_directory('mirs'),
                      'launch', 'mirs_hardware.launch.py')),
     launch_arguments={'esp_port': '/dev/ttyUSB1',
+                      'esp_baudrate': '115200',
                       'enable_ekf_local': 'true'}.items())
 ```
 
