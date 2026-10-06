@@ -22,7 +22,10 @@ def generate_launch_description():
 
     esp_port = DeclareLaunchArgument(
         'esp_port', default_value='/dev/ttyUSB1',
-        description='Set esp32 usb port.')
+        description='ESP32 micro-ROS serial device (USB or UART).')
+    esp_baudrate = DeclareLaunchArgument(
+        'esp_baudrate', default_value='115200',
+        description='ESP32 micro-ROS serial baudrate.')
     lidar_port = DeclareLaunchArgument(
         'lidar_port', default_value='/dev/ttyUSB0',
         description='Set lidar usb port.')
@@ -54,6 +57,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'esp_port': LaunchConfiguration('esp_port'),
+            'esp_baudrate': LaunchConfiguration('esp_baudrate'),
             'lidar_port': LaunchConfiguration('lidar_port'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'enable_lidar': LaunchConfiguration('enable_lidar'),
@@ -69,6 +73,7 @@ def generate_launch_description():
 
     ld = LaunchDescription()
     ld.add_action(esp_port)
+    ld.add_action(esp_baudrate)
     ld.add_action(lidar_port)
     ld.add_action(use_sim_time)
     ld.add_action(enable_static_laser_tf)

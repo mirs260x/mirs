@@ -62,7 +62,7 @@ def test_contract_launch_args_exist_in_hardware():
     contract = _contract()
     hw = (ROOT / "launch/mirs_hardware.launch.py").read_text()
     args = set(re.findall(r"`(enable_[a-z_]+|ekf_config_file"
-                           r"|esp_port|lidar_port|lidar_baudrate"
+                           r"|esp_port|esp_baudrate|lidar_port|lidar_baudrate"
                            r"|use_sim_time)`", contract))
     assert len(args) >= 10, f"too few launch args documented: {args}"
     for a in args:
