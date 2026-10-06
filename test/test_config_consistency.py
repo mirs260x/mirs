@@ -60,6 +60,14 @@ def _norm(src):
     return re.sub(r"\s+", "", s)
 
 
+def test_nav_launch_overrides_coverage_plugin():
+    # nav単体にはcoverage_serverが居ないため、coverageナビゲータ実体を
+    # 標準ToPoseに差し替える（productionは素のparams）。後退検出用。
+    nav = _norm((LAUNCH / "nav.launch.py").read_text())
+    assert "navigate_complete_coverage.plugin" in nav
+    assert "nav2_bt_navigator::NavigateToPoseNavigator" in nav
+
+
 def test_nav2_rviz_map_paths_are_correct():
     # 既知の誤パス回帰防止: 正しいサブディレクトリを参照していること
     nav = _norm((LAUNCH / "nav.launch.py").read_text())
@@ -81,3 +89,21 @@ def test_maps_have_pgms():
         cfg = yaml.safe_load(yf.read_text())
         assert (ROOT / "maps" / cfg["image"]).exists(), f"{yf}: image missing"
         assert cfg["resolution"] > 0
+
+
+def test_workspace_manifest_valid():
+    # AI/自動構築用のマニフェスト。URL・配置・版の過不足を検出する（通信なし）。
+    # 版の存在確認（ls-remote）はマニフェスト更新時に手動で行うこと。
+    repos = yaml.safe_load((ROOT / "workspace.repos").read_text())["repositories"]
+    expected = {
+        "src/original/mirs", "src/original/mirs_msgs",
+        "src/original/ble_server", "src/original/coverage",
+        "src/thirdparty/micro-ROS-Agent", "src/thirdparty/micro_ros_msgs",
+        "src/thirdparty/sllidar_ros2", "src/thirdparty/opennav_coverage",
+        "src/thirdparty/Fields2Cover",
+    }
+    assert set(repos) == expected, f"manifest mismatch: {set(repos) ^ expected}"
+    for path, spec in repos.items():
+        assert spec["type"] == "git", path
+        assert spec["url"].startswith(("https://github.com/", "git@github.com:")), path
+        assert spec["version"], path

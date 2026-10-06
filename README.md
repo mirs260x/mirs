@@ -22,6 +22,7 @@ docker(仮想環境)を使うか生環境を使うか選ぶことができます
 
 ESP32 と LiDAR を、LiDAR → ESP32 の順に PC へ接続してください。
 ESP32には事前にmirs_espもしくはmirs_esp_pioを送信しておいてください。
+実機へ書き込む前に、ピン割り当て、エンコーダ、車輪径、トレッド幅、モーター出力、非常停止、バッテリー監視の設定を確認してください。
 
 #### USBポート番号の考え方
 
@@ -74,21 +75,42 @@ ros2 launch mirs mirs.launch.py \
 
 ### 2. ワークスペースの作成とリポジトリのクローン
 
+方法A（推奨。人手・AI共通）：マニフェストから一括取得する。
+
+```bash
+mkdir -p mirs_workspace && cd mirs_workspace
+git clone https://github.com/mirs260x/mirs.git src/original/mirs
+vcs import src < src/original/mirs/workspace.repos  # 要 vcstool（pip install vcstool）
+```
+
+`workspace.repos` に全リポジトリ・配置・版が書かれている。AIエージェントに構築させる場合も、
+このファイルと各リポジトリのURLだけ渡せばよい。mirs2605/org の2件は非公開のため
+SSHの鍵認証が必要（HTTPSでは取得できない）。
+
+方法B（手動）：1件ずつcloneする。
+
 ```bash
 mkdir -p mirs_workspace/src/original mirs_workspace/src/thirdparty
 cd mirs_workspace/src/original
 
-# mirs パッケージを使う場合に必要な一式
+# 自前パッケージ一式
 # 使用する ROS 2 ディストリビューションに応じて jazzy/humble を適宜読み替えてください
 git clone https://github.com/mirs260x/mirs.git
-# 他の自前パッケージ（mirs_msgs 等）も src/original に配置する
+git clone https://github.com/mirs260x/mirs_msgs.git
+git clone https://github.com/mirs2605/ble_server.git
+git clone https://github.com/mirs2605/coverage.git
 
 cd ../thirdparty
 git clone -b jazzy https://github.com/micro-ROS/micro-ROS-Agent.git
 git clone https://github.com/Slamtec/sllidar_ros2.git
+git clone -b jazzy-v2 https://github.com/open-navigation/opennav_coverage.git
+git clone https://github.com/Fields2Cover/Fields2Cover.git
 
 cd ../..
 ```
+
+Nav2本体（`nav2_bringup` 等）は `package.xml` の依存宣言により次の `rosdep install` で入ります。
+`opennav_coverage` と `Fields2Cover` はソース配置が必要です（版は上記どおり）。
 
 ### 3. ビルド
 
@@ -176,17 +198,21 @@ ros2 launch mirs slam.launch.py
 コントローラでロボットを動かしながら地図を作成します。移動中は RViz2 上でもロボットが動いていることを確認してください（地図作成には LiDAR だけでなくエンコーダの接続が必要です）。
 
 地図ができたら、以下のコマンドで保存してください。`<マップ名>` は保存したいファイル名に置き換えてください。
+mirsパッケージのmaps/（`src/original/mirs/maps/`）に保存されます。
 slam_toolbox の `/map` は Durability `Transient Local` で配信されるため、
-`map_subscribe_transient_local:=true` が必須です（付けないと `Failed to spin map subscription` で失敗します）。
+関数内で `map_subscribe_transient_local:=true` を付けています。
 
 ```bash
 # /map が出ていることを先に確認（Hzが出なければSLAM側の問題）
 ros2 topic info /map -v
 ros2 topic hz /map
 
-# 保存（推奨: タイムアウト延長付き）
-ros2 run nav2_map_server map_saver_cli -f <保存先パス>/<マップ名> --ros-args -p map_subscribe_transient_local:=true -p save_map_timeout:=10.0
+# 保存（maps/<マップ名>.pgm/.yaml が作られる）
+savemap <マップ名>
 ```
+
+`savemap` はコンテナの `.bashrc` で定義される関数です。イメージを更新した場合は
+コンテナを作り直すか、新しいターミナルで `source ~/.bashrc` してください。
 
 代替手段（slam_toolbox経由。保存先はSLAMノード側のPC上のパスになります）:
 
@@ -201,7 +227,7 @@ ros2 service call /slam_toolbox/save_map slam_toolbox_msgs/srv.SaveMap "name: {d
 保存したマップを使って、スタート地点とゴール地点を定めて自律走行させることができます。
 
 ```bash
-# 起動時にデフォルトのマップパスを使う場合（launch ファイル内の default_map_path を変更）
+# 既定マップ（gakuseigenkan.yaml）で起動する場合
 ros2 launch mirs nav.launch.py
 
 # コマンドラインでマップを指定する場合
@@ -220,7 +246,18 @@ nav2 は起動直後、ロボットの正確な位置を把握していないた
 2. 地図上で行きたい位置・向きをクリック＆ドラッグして指定
 3. 経路（グローバルパス／ローカルパス）が表示され、ロボットが自律的に走行を開始する
 
-実機へ書き込む前に、ピン割り当て、エンコーダ、車輪径、トレッド幅、モーター出力、非常停止、バッテリー監視の設定を確認してください。
+### 本番一発起動（Nav2＋coverage＋BLE）
+
+清掃範囲の自動走行まで行う場合は `coverage` パッケージの本番launchを使います。
+詳細は [`coverage/README.md`](../coverage/README.md) を参照してください。
+
+```bash
+# RVizなし・BLEなしの手動テスト構成
+ros2 launch coverage production.launch.py use_rviz:=false enable_ble:=false
+```
+
+BLE実機なしで起動する場合は `enable_ble:=false` が必須です（GATT不在では
+`ble_receiver_node` が即死します）。清掃範囲は `/cleaning_zone` への投入で与えます。
 
 ## API リファレンス（安定インターフェース）
 

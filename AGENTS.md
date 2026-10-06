@@ -4,12 +4,15 @@ MIRS本体パッケージ（ハード・Nav2設定・launch）。CI: `pytest` �
 
 ## ブランチ運用
 
-- `main` / `develop` 直commit・直push禁止。`feature/*` → `develop` → `main` のPRのみ
+- `main` 直commit・直push禁止。`feature/*` → `main` のPRのみ
 - 1コミット1話題。`git add -p` で分割する
 
 ## テスト・ビルド
 
 ```bash
+z jazzy
+docker compose up -d
+docker compose exec ros bash
 python3 -m pytest test/ -q
 colcon build --symlink-install --packages-select mirs
 ```
