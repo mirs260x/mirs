@@ -5,10 +5,11 @@
   <version>0.0.0</version>
   <description>MIRS for ROS 2</description>
   <maintainer email="6kam465@gmail.com">mirs260x</maintainer>
+  <license>MIT</license>
+  <author>mirs260x</author>
   <author>mirs240x</author>
   <author>mirs2502</author>
   <author>mirs260x</author>
-  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
@@ -28,6 +29,7 @@
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>micro_ros_agent</exec_depend>
+  <exec_depend>micro_ros_msgs</exec_depend>
   <exec_depend>sllidar_ros2</exec_depend>
 
   <exec_depend>dwb_core</exec_depend>
