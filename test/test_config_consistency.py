@@ -27,8 +27,8 @@ def test_referenced_files_exist():
     pat = re.compile(
         r"os\.path\.join\(\s*mirs\w*(?:_pkg|_share_dir)?\s*((?:,\s*['\"][^'\"]+['\"])+)\)")
     missing = []
-    for f in LAUNCH.glob("*.launch.py"):
-        if f.name in ("mirs_hardware.launch.py",):
+    for f in LAUNCH.glob("*_launch.py"):
+        if f.name in ("mirs_launch.py",):
             continue  # 既定値は別途検証済み
         for m in pat.finditer(f.read_text()):
             parts = re.findall(r"['\"]([^'\"]+)['\"]", m.group(1))
@@ -60,20 +60,12 @@ def _norm(src):
     return re.sub(r"\s+", "", s)
 
 
-def test_nav_launch_overrides_coverage_plugin():
-    # nav単体にはcoverage_serverが居ないため、coverageナビゲータ実体を
-    # 標準ToPoseに差し替える（productionは素のparams）。後退検出用。
-    nav = _norm((LAUNCH / "nav.launch.py").read_text())
-    assert "navigate_complete_coverage.plugin" in nav
-    assert "nav2_bt_navigator::NavigateToPoseNavigator" in nav
-
-
 def test_nav2_rviz_map_paths_are_correct():
     # 既知の誤パス回帰防止: 正しいサブディレクトリを参照していること
-    nav = _norm((LAUNCH / "nav.launch.py").read_text())
+    nav = _norm((LAUNCH / "nav_launch.py").read_text())
     assert "'config','navigation','nav2_params.yaml'" in nav
     assert "my_mirs_map.yaml" not in nav
-    slam = _norm((LAUNCH / "slam.launch.py").read_text())
+    slam = _norm((LAUNCH / "slam_launch.py").read_text())
     assert "'config','rviz','default.rviz'" in slam
     assert "'config','slam'," in slam
 

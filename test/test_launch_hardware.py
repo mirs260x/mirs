@@ -1,5 +1,4 @@
-"""Launch structure tests (ROS不要・AST静的解析).
-
+"""Launch structure tests
 - mirs_hardware.launch.py が単一真実: 期待引数を宣言し、EKFパス既定が正しい
 - 静的TF既定はfalse (EKFと競合させない)
 - 上位launchはhardwareを直接Includeし、esp/lidar/use_sim_timeを転送
