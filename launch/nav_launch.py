@@ -4,38 +4,30 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
 
-    pkg_share = PathJoinSubstitution([FindPackageShare('mirs'), 'launch'])
-    mirs_share_dir = get_package_share_directory('mirs')
+    mirs_pkg = FindPackageShare('mirs')
 
     return LaunchDescription([
+
         DeclareLaunchArgument(
             'map',
-            default_value=default_map_path
-            ),
-        DeclareLaunchArgument(
-            'use_sim_time',
-            default_value='false',
-            description='Use simulation (Gazebo) clock if true'
-            ),
-        DeclareLaunchArgument(
-            'ekf_config_file',
-            default_value=os.path.join(mirs_share_dir, 'config', 'ekf', 'ekf_params.yaml'),
+            default_value = PathJoinSubstitution([mirs_pkg, 'maps', 'es.yaml']) 
             ),
 
-        # MIRS本体のハードウェア (mirs_launch.pyを直接Include)
+        # mirs_launch.py
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(mirs_share_dir, 'launch', 'mirs_launch.py')
+                PathJoinSubstitution([mirs_pkg, 'launch', 'mirs_launch.py'])
                 ),
-            launch_arguments={
-                'ekf_config_file': LaunchConfiguration('ekf_config_file'),
-                'use_sim_time': 'false',
+            launch_arguments = {
+                'map': LaunchConfiguration('map'),
                 'enable_ekf_local': 'true',
-                'use_rviz': 'true',
+                'enable_rviz': 'true',
+                'enable_nav2': 'true',
                 }.items()
-            ),
+            )
     ])
