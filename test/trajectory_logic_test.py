@@ -1,29 +1,52 @@
-"""TrajectoryPublisher logic tests (ROSなしで実スクリプトをimport).
+# Copyright 2026 mirs260x
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
-scripts/trajectory_publisher.py は rclpy に依存するため、
-sys.modules に軽量スタブを差してから読み込む。
-テスト対象: calculate_distance / 5cm記録閾値 / 0.5mジャンプ無視。
+
 """
+Test trajectory publisher logic without ROS.
+
+The test imports the real script after installing minimal ROS module stubs.
+It covers distance calculation, the 5 cm recording threshold, and jump filtering.
+"""
+import importlib.util
+from pathlib import Path
 import sys
 import types
 from unittest.mock import MagicMock
 
 
 def _install_ros_stubs():
-    if "rclpy" in sys.modules and hasattr(sys.modules["rclpy"], "_mirs_stub"):
+    if 'rclpy' in sys.modules and hasattr(sys.modules['rclpy'], '_mirs_stub'):
         return
-    rclpy = types.ModuleType("rclpy")
+    rclpy = types.ModuleType('rclpy')
     rclpy._mirs_stub = True
     rclpy.init = lambda *a, **k: None
     rclpy.spin = lambda *a, **k: None
     rclpy.shutdown = lambda *a, **k: None
 
-    node_mod = types.ModuleType("rclpy.node")
+    node_mod = types.ModuleType('rclpy.node')
 
     class Node:
         def __init__(self, name):
             self._name = name
-            self._params = {"frame_id": "odom"}
+            self._params = {'frame_id': 'odom'}
 
         def declare_parameter(self, name, value):
             self._params[name] = value
@@ -52,8 +75,8 @@ def _install_ros_stubs():
     node_mod.Node = Node
     rclpy.node = node_mod
 
-    nav_msgs = types.ModuleType("nav_msgs")
-    nav_msgs_msg = types.ModuleType("nav_msgs.msg")
+    nav_msgs = types.ModuleType('nav_msgs')
+    nav_msgs_msg = types.ModuleType('nav_msgs.msg')
 
     class _Pos:
         def __init__(self, x=0.0, y=0.0):
@@ -80,31 +103,31 @@ def _install_ros_stubs():
     nav_msgs_msg.Path = Path
     nav_msgs_msg.PoseStamped = PoseStamped
 
-    geom = types.ModuleType("geometry_msgs")
-    geom_msg = types.ModuleType("geometry_msgs.msg")
+    geom = types.ModuleType('geometry_msgs')
+    geom_msg = types.ModuleType('geometry_msgs.msg')
     geom_msg.PoseStamped = PoseStamped
 
-    sys.modules["rclpy"] = rclpy
-    sys.modules["rclpy.node"] = node_mod
-    sys.modules["nav_msgs"] = nav_msgs
-    sys.modules["nav_msgs.msg"] = nav_msgs_msg
-    sys.modules["geometry_msgs"] = geom
-    sys.modules["geometry_msgs.msg"] = geom_msg
+    sys.modules['rclpy'] = rclpy
+    sys.modules['rclpy.node'] = node_mod
+    sys.modules['nav_msgs'] = nav_msgs
+    sys.modules['nav_msgs.msg'] = nav_msgs_msg
+    sys.modules['geometry_msgs'] = geom
+    sys.modules['geometry_msgs.msg'] = geom_msg
 
 
 _install_ros_stubs()
 
-import importlib.util
 
 SPEC = importlib.util.spec_from_file_location(
-    "trajectory_publisher", "scripts/trajectory_publisher.py")
+    'trajectory_publisher',
+    Path(__file__).resolve().parents[1] / 'scripts' / 'trajectory_publisher.py')
 _mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(_mod)
 
 
 def _odom(x, y):
     msg = MagicMock()
-    msg.header.stamp = "t"
+    msg.header.stamp = 't'
     msg.pose.pose.position.x = x
     msg.pose.pose.position.y = y
     msg.pose.pose = msg.pose.pose
