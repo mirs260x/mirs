@@ -4,10 +4,10 @@
 ### ハードウェア
 
 - PC
-- cugo v3i
+- クローラ型移動ロボット
 - ESP32
-- Cytron MD10C
-- RPLiDAR S1
+- PWM/DIR方式モータドライバ
+- 2D LiDAR
 
 ### ソフトウェア
 
@@ -26,7 +26,7 @@ ESP32には事前にmirs_espもしくはmirs_esp_pioを送信しておいてく�
 
 #### micro-ROSの接続方法
 
-micro-ROS Agent はUSBシリアルとRaspberry PiのGPIO UARTのどちらでも接続できます。
+micro-ROS Agent はUSBシリアルとSBCのGPIO UARTのどちらでも接続できます。
 ファームウェア書き込みはUSBを使用し、Piとの実行時micro-ROS通信だけをGPIO UARTにする場合は、
 ESP32のUARTピンをPiのUARTピンに接続し、launch引数 `esp_port` でPi側のデバイスを指定します。
 この設定はPi側Agentのポートとボーレートを選ぶものです。ESP32側ファームウェアも同じUARTピンと
@@ -69,12 +69,12 @@ dmesg | grep -E "ttyUSB|cp210x|ch341" | tail -10
 # 方法2: 機器固有名で見分ける（抜き差しに強くおすすめ）
 ls -l /dev/serial/by-id/
 # 例:
-#   usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_XXXX-if00-port0 -> ../../ttyUSB0
+#   usb-<USBシリアル変換器の識別名> -> ../../ttyUSB0
 #   usb-1a86_USB_Serial-if00-port0 -> ../../ttyUSB1
 ```
 
 `by-id` 名は機器ごとに固有なので、一度対応をメモしておけば毎回 `dmesg` を見る必要がなくなります。
-LiDAR側は `CP2102`、ESP32側は `CP2102` または `CH340（1a86）` と表示されることが多いです。
+LiDAR側とESP32側は、USBシリアル変換器の製品名で表示されることがあります。
 
 #### 順序を変えた場合の起動方法
 
@@ -90,7 +90,7 @@ ros2 launch mirs mirs.launch.py esp_port:=/dev/ttyUSB0 lidar_port:=/dev/ttyUSB1
 # by-id名で指定する場合（番号変動に強くおすすめ）
 ros2 launch mirs mirs.launch.py \
   esp_port:=/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0 \
-  lidar_port:=/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_XXXX-if00-port0
+  lidar_port:=/dev/serial/by-id/<LiDAR側USBシリアル変換器の識別名>
 ```
 
 `XXXX` 部分は各自の環境の `ls -l /dev/serial/by-id/` 出力に読み替えてください。
@@ -125,7 +125,7 @@ git clone https://github.com/mirs2605/coverage.git
 
 cd ../thirdparty
 git clone -b jazzy https://github.com/micro-ROS/micro-ROS-Agent.git
-git clone https://github.com/Slamtec/sllidar_ros2.git
+git clone <LiDAR用ROS 2ドライバのGit URL>
 git clone -b jazzy-v2 https://github.com/open-navigation/opennav_coverage.git
 git clone https://github.com/Fields2Cover/Fields2Cover.git
 
@@ -202,7 +202,7 @@ ros2 topic list
 # x, y, z 軸でロボットがどこにいるかの確認
 ros2 topic echo /odom
 
-# エンコーダの値の確認（cugo v3 はクローラのため値は2つ出ます）
+# エンコーダの値の確認（左右2系統の値が出ます）
 ros2 topic echo /encoder
 
 # TF ツリーの確認
