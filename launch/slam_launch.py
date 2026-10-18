@@ -1,13 +1,35 @@
-"""slam.launch.py: ハードウェア＋slam_toolbox＋RVizの起動構成。"""
-import os
+# Copyright 2026 mirs260x
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
+
+"""
+slam.launch.py.
+
+Bring up hardware, slam_toolbox, and RViz.
+"""
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+
 
 def generate_launch_description():
 
@@ -17,19 +39,19 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             'ekf_config_file',
-            default_value = PathJoinSubstitution([mirs_pkg, 'config', 'ekf', 'ekf_params.yaml'])
-            ),
+            default_value=PathJoinSubstitution([mirs_pkg, 'config', 'ekf', 'ekf_params.yaml'])
+        ),
 
         # mirs_launch.py
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 PathJoinSubstitution([mirs_pkg, 'launch', 'mirs_launch.py'])
-                ),
-            launch_arguments = {
+            ),
+            launch_arguments={
                 'ekf_config_file': LaunchConfiguration('ekf_config_file'),
                 'enable_ekf_local': 'true',
                 'enable_slam_toolbox': 'true',
                 'enable_rviz': 'true'
-                }.items()
-            )
-        ])
+            }.items()
+        )
+    ])

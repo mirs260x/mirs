@@ -1,11 +1,35 @@
 #!/usr/bin/env python3
-"""オドメトリ回転精度の手動テストノード（一回転して停止）。"""
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
+
+# Copyright 2026 mirs260x
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+
+"""Odometer rotation accuracy test node (rotate once and stop)."""
+
 import math
 import time
+
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+import rclpy
+from rclpy.node import Node
 from tf_transformations import euler_from_quaternion
 
 TIMER_PERIOD = 0.1  # [s] 制御周期
@@ -14,8 +38,10 @@ P_GAIN = 0.5  # Pゲイン [1/s]
 MAX_SPEED = 0.5  # [rad/s] 指令上限
 MIN_SPEED = 0.1  # [rad/s] 指令下限
 
+
 class OdomRotateTest(Node):
-    """P制御で目標角度だけ回転するテストノード。"""
+    """P-control test node that rotates to a target angle."""
+
     def __init__(self):
         super().__init__('odom_rotate_test')
 
@@ -40,7 +66,7 @@ class OdomRotateTest(Node):
     def odom_callback(self, msg):
         orientation_q = msg.pose.pose.orientation
         orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
-        ( _roll, _pitch, current_yaw) = euler_from_quaternion(orientation_list)
+        (_roll, _pitch, current_yaw) = euler_from_quaternion(orientation_list)
 
         if self.last_yaw is None:
             self.last_yaw = current_yaw
@@ -82,7 +108,9 @@ class OdomRotateTest(Node):
             self.publisher_.publish(twist)
 
             current_deg = math.degrees(self.accumulated_angle)
-            self.get_logger().info(f'Angle: {current_deg:.1f} / 360.0 deg (Speed: {speed:.3f} rad/s)')
+            self.get_logger().info(
+                f'Angle: {current_deg:.1f} / 360.0 deg (Speed: {speed:.3f} rad/s)')
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -98,6 +126,7 @@ def main(args=None):
         node.publisher_.publish(Twist())
         node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

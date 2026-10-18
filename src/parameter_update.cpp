@@ -1,69 +1,90 @@
+// Copyright 2026 mirs260x
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+
 /** @file parameter_update.cpp
  *  @brief /esp_update サービスでESPにパラメータを単発送信するクライアント。
  */
-#include "rclcpp/rclcpp.hpp"
-#include "mirs_msgs/srv/parameter_update.hpp"  // 新しいサービスファイルをインクルード
-
 #include <chrono>
 #include <cstdlib>
 #include <memory>
+
+#include "rclcpp/rclcpp.hpp"
+#include "mirs_msgs/srv/parameter_update.hpp"  // 新しいサービスファイルをインクルード
 
 using namespace std::chrono_literals;
 
 int main(int argc, char **argv)
 {
-    rclcpp::init(argc, argv);
+  rclcpp::init(argc, argv);
 
-    auto node = rclcpp::Node::make_shared("parameter_update_client");
+  auto node = rclcpp::Node::make_shared("parameter_update_client");
 
-    auto client = node->create_client<mirs_msgs::srv::ParameterUpdate>("esp_update");
+  auto client = node->create_client<mirs_msgs::srv::ParameterUpdate>("esp_update");
 
     // 既定値は config.yaml と一致させること（単独起動時の安全側）
-    node->declare_parameter("wheel_radius", 0.0391);
-    node->declare_parameter("wheel_base", 0.39);
-    node->declare_parameter("rkp", 40.0);
-    node->declare_parameter("rki", 150.0);
-    node->declare_parameter("rkd", 0.4);
-    node->declare_parameter("lkp", 40.0);
-    node->declare_parameter("lki", 150.0);
-    node->declare_parameter("lkd", 0.4);
+  node->declare_parameter("wheel_radius", 0.0391);
+  node->declare_parameter("wheel_base", 0.39);
+  node->declare_parameter("rkp", 40.0);
+  node->declare_parameter("rki", 150.0);
+  node->declare_parameter("rkd", 0.4);
+  node->declare_parameter("lkp", 40.0);
+  node->declare_parameter("lki", 150.0);
+  node->declare_parameter("lkd", 0.4);
 
     // サービスが利用可能になるまで待機
-    while (!client->wait_for_service(1s)) {
-        if (!rclcpp::ok()) {
-            RCLCPP_ERROR(node->get_logger(), "サービス待機中に中断されました。終了します。");
-            return 1;
-        }
-        RCLCPP_INFO(node->get_logger(), "サービスが利用できません。再試行します...");
+  while (!client->wait_for_service(1s)) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(node->get_logger(), "サービス待機中に中断されました。終了します。");
+      return 1;
     }
+    RCLCPP_INFO(node->get_logger(), "サービスが利用できません。再試行します...");
+  }
 
     // リクエストの作成
-    auto request = std::make_shared<mirs_msgs::srv::ParameterUpdate::Request>();
+  auto request = std::make_shared<mirs_msgs::srv::ParameterUpdate::Request>();
 
-    request->wheel_radius = node->get_parameter("wheel_radius").as_double();
-    request->wheel_base = node->get_parameter("wheel_base").as_double();
-    request->rkp = node->get_parameter("rkp").as_double();
-    request->rki = node->get_parameter("rki").as_double();
-    request->rkd = node->get_parameter("rkd").as_double();
-    request->lkp = node->get_parameter("lkp").as_double();
-    request->lki = node->get_parameter("lki").as_double();
-    request->lkd = node->get_parameter("lkd").as_double();
+  request->wheel_radius = node->get_parameter("wheel_radius").as_double();
+  request->wheel_base = node->get_parameter("wheel_base").as_double();
+  request->rkp = node->get_parameter("rkp").as_double();
+  request->rki = node->get_parameter("rki").as_double();
+  request->rkd = node->get_parameter("rkd").as_double();
+  request->lkp = node->get_parameter("lkp").as_double();
+  request->lki = node->get_parameter("lki").as_double();
+  request->lkd = node->get_parameter("lkd").as_double();
 
-    auto result = client->async_send_request(request);
+  auto result = client->async_send_request(request);
 
-    if (rclcpp::spin_until_future_complete(node, result) == rclcpp::FutureReturnCode::SUCCESS) {
-        const bool ok = result.get()->success;
-        RCLCPP_INFO(node->get_logger(), "リクエストの成功状態: %s", ok ? "true" : "false");
-        if (!ok) {
-            rclcpp::shutdown();
-            return 1;
-        }
-    } else {
-        RCLCPP_ERROR(node->get_logger(), "サービス呼び出しに失敗しました。");
-        rclcpp::shutdown();
-        return 1;
+  if (rclcpp::spin_until_future_complete(node, result) == rclcpp::FutureReturnCode::SUCCESS) {
+    const bool ok = result.get()->success;
+    RCLCPP_INFO(node->get_logger(), "リクエストの成功状態: %s", ok ? "true" : "false");
+    if (!ok) {
+      rclcpp::shutdown();
+      return 1;
     }
-
+  } else {
+    RCLCPP_ERROR(node->get_logger(), "サービス呼び出しに失敗しました。");
     rclcpp::shutdown();
-    return 0;
+    return 1;
+  }
+
+  rclcpp::shutdown();
+  return 0;
 }
