@@ -22,7 +22,7 @@
 """
 nav.launch.py.
 
-Bring up hardware, Nav2, and RViz.
+navigation2とrvizを起動して、自律走行をするよ
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
@@ -49,7 +49,6 @@ def generate_launch_description():
             ),
             launch_arguments={
                 'map': LaunchConfiguration('map'),
-                'enable_ekf_local': 'true',
                 'enable_rviz': 'true',
                 'enable_nav2': 'true',
             }.items()

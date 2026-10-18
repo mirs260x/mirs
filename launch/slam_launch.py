@@ -20,9 +20,9 @@
 
 
 """
-slam.launch.py.
+slam_launch.py.
 
-Bring up hardware, slam_toolbox, and RViz.
+slamtoolboxとrvizを起動して地図作成をするよ
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
@@ -37,19 +37,12 @@ def generate_launch_description():
 
     return LaunchDescription([
 
-        DeclareLaunchArgument(
-            'ekf_config_file',
-            default_value=PathJoinSubstitution([mirs_pkg, 'config', 'ekf', 'ekf_params.yaml'])
-        ),
-
         # mirs_launch.py
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 PathJoinSubstitution([mirs_pkg, 'launch', 'mirs_launch.py'])
             ),
             launch_arguments={
-                'ekf_config_file': LaunchConfiguration('ekf_config_file'),
-                'enable_ekf_local': 'true',
                 'enable_slam_toolbox': 'true',
                 'enable_rviz': 'true'
             }.items()

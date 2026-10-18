@@ -23,6 +23,7 @@
 mirs_launch.py.
 
 上位launchはこのファイルを直接Includeすること。
+直進走行や旋回走行のテストをするためにnavやslamやrvizを除いたノードをたちあげるよ
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
@@ -69,6 +70,7 @@ def generate_launch_description():
         DeclareLaunchArgument('esp_port', default_value='/dev/ttyUSB1'),
         DeclareLaunchArgument('lidar_port', default_value='/dev/ttyUSB0'),
         DeclareLaunchArgument('lidar_baudrate', default_value='256000'),
+        DeclareLaunchArgument('lidar_frame', default_value='laser'),
 
         # 真偽値
         # simulation time
@@ -77,17 +79,15 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_lidar', default_value='true'),
         DeclareLaunchArgument('enable_parameter_publisher', default_value='true'),
         DeclareLaunchArgument('enable_micro_ros', default_value='true'),
-        DeclareLaunchArgument('enable_ekf_local', default_value='true'),
+        DeclareLaunchArgument('enable_ekf_local', default_value='false'),
         DeclareLaunchArgument('enable_rviz', default_value='false'),
         DeclareLaunchArgument('enable_nav2', default_value='false'),
         DeclareLaunchArgument('enable_slam_toolbox', default_value='false'),
         # tf
-        # EKFを使うならodom->base_linkはfalse
-        DeclareLaunchArgument('enable_static_odom_to_base_footprint_tf', default_value='false'),
         DeclareLaunchArgument('enable_static_base_link_to_laser_tf', default_value='true'),
         DeclareLaunchArgument('enable_static_base_footprint_to_base_link_tf',
                               default_value='true'),
-        DeclareLaunchArgument('enable_static_base_link_to_imu_link_tf', default_value='true'),
+        DeclareLaunchArgument('enable_static_base_link_to_imu_link_tf', default_value='false'),
 
         Node(
             package='mirs',
@@ -122,19 +122,11 @@ def generate_launch_description():
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='enable_static_odom_to_base_footprint_tf',
-            output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'odom', 'base_footprint'],
-            condition=IfCondition(LaunchConfiguration('enable_static_odom_to_base_footprint_tf')),
-        ),
-
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
             name='enable_static_base_link_to_laser_tf',
             output='screen',
             arguments=['--x', '0', '--y', '0', '--z', '0.1745', '--roll', '0', '--pitch',
-                       '0', '--yaw', '0', '--frame-id', 'base_link', '--child-frame-id', 'laser'],
+                       '0', '--yaw', '0', '--frame-id', 'base_link',
+                       '--child-frame-id', LaunchConfiguration('lidar_frame')],
             condition=IfCondition(LaunchConfiguration('enable_static_base_link_to_laser_tf')),
         ),
 
@@ -182,6 +174,7 @@ def generate_launch_description():
             launch_arguments={
                 'serial_port': LaunchConfiguration('lidar_port'),
                 'serial_baudrate': LaunchConfiguration('lidar_baudrate'),
+                'frame_id': LaunchConfiguration('lidar_frame'),
             }.items(),
             condition=IfCondition(LaunchConfiguration('enable_lidar')),
         ),
