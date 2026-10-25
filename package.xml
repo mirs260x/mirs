@@ -31,6 +31,7 @@
   <exec_depend>micro_ros_agent</exec_depend>
   <exec_depend>micro_ros_msgs</exec_depend>
   <exec_depend>sllidar_ros2</exec_depend>
+  <exec_depend>foxglove_bridge</exec_depend>
 
   <exec_depend>dwb_core</exec_depend>
   <exec_depend>dwb_msgs</exec_depend>

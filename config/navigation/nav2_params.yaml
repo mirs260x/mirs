@@ -380,7 +380,8 @@ collision_monitor:
     base_frame_id: "base_footprint"
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
-    cmd_vel_out_topic: "cmd_vel"
+    # scan_safety_guard gates Nav2 output before it reaches ESP32 /cmd_vel.
+    cmd_vel_out_topic: "cmd_vel_nav"
     state_topic: "collision_monitor_state"
     transform_tolerance: 0.2
     source_timeout: 1.0

@@ -18,19 +18,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 """
 mirs_launch.py.
 
-上位launchはこのファイルを直接Includeすること。
+上位launchはこのファイルをIncludeすること。
 直進走行や旋回走行のテストをするためにnavやslamやrvizを除いたノードをたちあげるよ
 """
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 from nav2_common.launch import RewrittenYaml
 
@@ -71,23 +71,35 @@ def generate_launch_description():
         DeclareLaunchArgument('lidar_port', default_value='/dev/ttyUSB0'),
         DeclareLaunchArgument('lidar_baudrate', default_value='256000'),
         DeclareLaunchArgument('lidar_frame', default_value='laser'),
+        DeclareLaunchArgument('foxglove_address', default_value='0.0.0.0'),
+        DeclareLaunchArgument('foxglove_port', default_value='8765'),
 
         # 真偽値
         # simulation time
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         # node
         DeclareLaunchArgument('enable_lidar', default_value='true'),
+        DeclareLaunchArgument('scan_safety_stop_distance', default_value='0.35'),
+        DeclareLaunchArgument('scan_safety_resume_distance', default_value='0.50'),
+        DeclareLaunchArgument('scan_safety_forward_angle', default_value='30.0'),
         DeclareLaunchArgument('enable_parameter_publisher', default_value='true'),
         DeclareLaunchArgument('enable_micro_ros', default_value='true'),
         DeclareLaunchArgument('enable_ekf_local', default_value='false'),
         DeclareLaunchArgument('enable_rviz', default_value='false'),
         DeclareLaunchArgument('enable_nav2', default_value='false'),
         DeclareLaunchArgument('enable_slam_toolbox', default_value='false'),
+        DeclareLaunchArgument('autostart', default_value='true'),
+        DeclareLaunchArgument('slam', default_value='False'),
+        DeclareLaunchArgument(
+            'enable_auto_global_localization', default_value='true',
+            description='AMCLを地図全体から自動初期化する'),
         # tf
         DeclareLaunchArgument('enable_static_base_link_to_laser_tf', default_value='true'),
         DeclareLaunchArgument('enable_static_base_footprint_to_base_link_tf',
                               default_value='true'),
         DeclareLaunchArgument('enable_static_base_link_to_imu_link_tf', default_value='false'),
+        DeclareLaunchArgument('enable_slam_toolbox', default_value='false'),
+        DeclareLaunchArgument('enable_foxglove_bridge', default_value='true'),
 
         Node(
             package='mirs',
@@ -178,6 +190,28 @@ def generate_launch_description():
             }.items(),
             condition=IfCondition(LaunchConfiguration('enable_lidar')),
         ),
+        Node(
+            package='mirs',
+            executable='scan_safety_guard',
+            name='scan_safety_guard',
+            output='screen',
+            parameters=[{
+                'scan_topic': '/scan',
+                'input_cmd_vel_topic': '/cmd_vel_nav',
+                'output_cmd_vel_topic': '/cmd_vel',
+                'stop_distance': ParameterValue(
+                    LaunchConfiguration('scan_safety_stop_distance'), value_type=float),
+                'resume_distance': ParameterValue(
+                    LaunchConfiguration('scan_safety_resume_distance'), value_type=float),
+                'forward_angle_deg': ParameterValue(
+                    LaunchConfiguration('scan_safety_forward_angle'), value_type=float),
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+            }],
+            condition=IfCondition(PythonExpression([
+                "'", LaunchConfiguration('enable_lidar'), "'.lower() == 'true' and '",
+                LaunchConfiguration('enable_nav2'), "'.lower() == 'true'",
+            ])),
+        ),
         # Nav2 スタック本体の起動
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -186,6 +220,8 @@ def generate_launch_description():
             launch_arguments={
                 'map': LaunchConfiguration('map'),
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'autostart': LaunchConfiguration('autostart'),
+                'slam': LaunchConfiguration('slam'),
                 'params_file': RewrittenYaml(
                     source_file=LaunchConfiguration('nav2_params_file'),
                     param_rewrites={
@@ -196,6 +232,28 @@ def generate_launch_description():
                 ),
             }.items(),
             condition=IfCondition(LaunchConfiguration('enable_nav2'))
+        ),
+
+        # AMCLを地図全体の一様分布で初期化し、2D Pose Estimateを不要にする。
+        # SLAMモードではAMCLが起動しないため呼び出さない。
+        TimerAction(
+            period=5.0,
+            actions=[ExecuteProcess(
+                cmd=[
+                    'ros2', 'service', 'call',
+                    '/reinitialize_global_localization',
+                    'std_srvs/srv/Empty', '{}',
+                ],
+                output='screen',
+            )],
+            condition=IfCondition(PythonExpression([
+                "'", LaunchConfiguration('enable_nav2'),
+                "'.lower() == 'true' and '",
+                LaunchConfiguration('slam'),
+                "'.lower() == 'false' and '",
+                LaunchConfiguration('enable_auto_global_localization'),
+                "'.lower() == 'true'",
+            ])),
         ),
 
         # slam toolboxの起動
@@ -211,4 +269,16 @@ def generate_launch_description():
             }.items(),
             condition=IfCondition(LaunchConfiguration('enable_slam_toolbox'))
         ),
+
+        # foxglove bridgeの起動
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([FindPackageShare('foxglove_bridge'), 'launch', 'foxglove_bridge_launch.xml']),
+                ),
+            launch_arguments={
+                'address': LaunchConfiguration('foxglove_address'),
+                'port': LaunchConfiguration('foxglove_port'),
+                }.items(),
+            condition=IfCondition(LaunchConfiguration('enable_foxglove_bridge'))
+            ),
     ])

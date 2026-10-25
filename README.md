@@ -16,6 +16,28 @@
 
 docker(仮想環境)を使うか生環境を使うか選ぶことができます。
 
+## LiDAR安全停止
+
+`mirs_launch.py` / `bringup_launch.py` では、Nav2とLiDARが有効な場合に
+`scan_safety_guard` を起動します。Nav2の `collision_monitor` 出力 `/cmd_vel_nav` を監視し、
+ゲート後の `/cmd_vel` をESP32へ送ります。Nav2を起動しない場合は監視ノードは起動せず、
+従来どおり `/cmd_vel` がESP32への指令になります。
+前方±30°の `/scan` に有効な距離があり、最小距離が0.35 m以下になるとESP32向け速度指令を
+ゼロにします。0.50 m以上まで離れると停止を解除し、直近のNav2速度指令を再び通します。
+ヒステリシス幅と前方角度は次のlaunch引数で変更できます。
+
+```bash
+ros2 launch mirs mirs_launch.py \
+  enable_nav2:=true \
+  scan_safety_stop_distance:=0.35 scan_safety_resume_distance:=0.50 \
+  scan_safety_forward_angle:=30.0
+```
+
+LiDARスキャンが0.5秒以上届かない場合もゼロ指令を出します。Nav2有効時に他のノードから
+`/cmd_vel` を直接publishすると安全ゲートを迂回するため、速度指令はNav2経由で出してください。
+首振りLiDARでは角度ごとの距離を照合せず、現スキャンの正面角度帯を使います。検知距離・角度帯と
+実際の停止距離は、低速・無人の条件から実機で確認してください。
+
 ## 導入
 
 ### 1. ESP32 と LiDAR の準備
@@ -215,7 +237,15 @@ ros2 run tf2_tools view_frames
 
 ```bash
 # マップ作成
-ros2 launch mirs slam.launch.py
+ros2 launch mirs slam_launch.py
+```
+
+SLAM Toolboxのscan matchingとループクロージャを使って、ロボットを動かしながら地図を作成します。`slam_launch.py` はオドメトリTF用のEKFも有効にします。ループクロージャは `config/slam/slam_toolbox_config.yaml` の `do_loop_closing: true` で有効です。既走行箇所を十分に重ねて走行すると、LiDARスキャンの一致から過去の姿勢を補正します。
+
+### 地図作成（SLAM）
+
+```bash
+ros2 launch mirs mirs_launch.py enable_slam_toolbox:=true enable_rviz:=true
 ```
 
 コントローラでロボットを動かしながら地図を作成します。移動中は RViz2 上でもロボットが動いていることを確認してください（地図作成には LiDAR だけでなくエンコーダの接続が必要です）。
@@ -248,7 +278,10 @@ ros2 launch mirs nav.launch.py
 ros2 launch mirs nav.launch.py map:=<保存先パス>/<マップ名>.yaml
 ```
 
-nav2 は起動直後、ロボットの正確な位置を把握していないため、必ず初期位置合わせを行ってください。
+Nav2は起動時にAMCLを地図全体の一様分布で自動初期化します。ロボットをゆっくり動かすと、LiDARスキャンとオドメトリから候補が収束します。
+対称な場所などで自動推定が一意に決まらない場合だけ、RViz2の「2D Pose Estimate」で初期位置を指定してください。
+
+自動推定が収束しない場合のみ、次の手順で手動指定します。
 
 1. RViz2 上部ツールバーの「2D Pose Estimate」をクリック
 2. 地図上の、実際のロボットが存在する位置・向きをドラッグして指定
@@ -284,7 +317,8 @@ BLE実機なしで起動する場合は `enable_ble:=false` が必須です（GA
 
 | 名前 | 型 | 方向 | 説明 |
 |---|---|---|---|
-| `/cmd_vel` | `geometry_msgs/Twist` | 入力（利用者→ESP） | 速度指令（本Pkgはテストスクリプトが発行、購読はESP側） |
+| `/cmd_vel` | `geometry_msgs/Twist` | Nav2時: 安全ゲート→ESP32 / Nav2なし: 入力→ESP32 | Nav2起動時はLiDAR判定後の速度指令 |
+| `/cmd_vel_nav` | `geometry_msgs/Twist` | 入力（Nav2→安全ゲート） | Nav2出力（Nav2起動時） |
 | `/odom` | `nav_msgs/Odometry` | 出力 | オドメトリ（ESP32がmicro-ROS経由で配信、`frame_id=odom`） |
 | `/params` | `mirs_msgs/BasicParam` | 出力 | ESP用パラメータ転送（2Hz） |
 | `/scan` | `sensor_msgs/LaserScan` | 出力 | LiDARドライバ（sllidar_ros2経由） |
@@ -315,34 +349,53 @@ BLE実機なしで起動する場合は `enable_ble:=false` が必須です（GA
 |---|---|---|
 | `parameter_publisher` | `wheel_radius`、`wheel_base`、`rkp`、`rki`、`rkd`、`lkp`、`lki`、`lkd` | ESPへ転送する車輪・PID値 |
 
-### 起動引数（`mirs_hardware.launch.py`）
+### 起動引数（`mirs_launch.py` API）
+
+上位launchから機体の基本ノードを利用する場合は、`mirs_launch.py` をincludeしてください。
+この表にあるlaunch引数を外部APIとして扱い、ノード名・内部topic・設定ファイルの構造は実装詳細です。
 
 | 引数 | 既定値 | 説明 |
 |---|---|---|
 | `esp_port` | `/dev/ttyUSB1` | ESP32 micro-ROSのシリアルデバイス（USBまたはUART） |
-| `esp_baudrate` | `115200` | ESP32 micro-ROSのシリアルボーレート |
 | `lidar_port` | `/dev/ttyUSB0` | LiDARのUSBポート |
 | `lidar_baudrate` | `256000` | LiDARボーレート |
+| `lidar_frame` | `laser` | LiDARのフレーム名 |
 | `use_sim_time` | `false` | シミュレーション時刻 |
 | `enable_lidar` | `true` | LiDARドライバの有効化 |
+| `scan_safety_stop_distance` | `0.35` | 安全停止距離（m） |
+| `scan_safety_resume_distance` | `0.50` | 安全停止解除距離（m） |
+| `scan_safety_forward_angle` | `30.0` | 前方監視角度（±度） |
 | `enable_parameter_publisher` | `true` | `parameter_publisher` の有効化 |
 | `enable_micro_ros` | `true` | micro-ROS agentの有効化 |
-| `enable_ekf_local` | `true` | EKF（`odom`→`base_footprint`）の有効化 |
+| `enable_ekf_local` | `false` | EKF（`odom`→`base_footprint`）の有効化 |
+| `enable_rviz` | `false` | MIRS標準RVizの有効化 |
+| `enable_nav2` | `false` | Nav2の有効化 |
+| `enable_slam_toolbox` | `false` | SLAM Toolboxの有効化 |
+| `autostart` | `true` | Nav2ライフサイクルの自動起動 |
+| `slam` | `False` | Nav2のSLAMモード切替 |
+| `enable_auto_global_localization` | `true` | AMCLを地図全体から自動初期化 |
 | `ekf_config_file` | `config/ekf/ekf_params.yaml` | EKF設定ファイル |
-| `enable_static_odom_tf` | `false` | 静的TF（EKFと併用不可のためfalse維持） |
-| `enable_static_laser_tf` | `true` | 静的TF（`base_link`→`laser`） |
-| `enable_static_footprint_tf` | `true` | 静的TF（`base_footprint`→`base_link`） |
+| `nav2_params_file` | `config/navigation/nav2_params.yaml` | Nav2設定ファイル |
+| `rviz_config_file` | `config/rviz/default.rviz` | RViz設定ファイル |
+| `slam_toolbox_config_file` | `config/slam/slam_toolbox_config.yaml` | SLAM Toolbox設定ファイル |
+| `enable_static_base_link_to_laser_tf` | `true` | 静的TF（`base_link`→LiDAR） |
+| `enable_static_base_footprint_to_base_link_tf` | `true` | 静的TF（`base_footprint`→`base_link`） |
+| `enable_static_base_link_to_imu_link_tf` | `false` | 静的TF（`base_link`→`imu_link`） |
 
 別パッケージから基礎機能を使う例：
 
 ```python
 IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
-        os.path.join(get_package_share_directory('mirs'),
-                     'launch', 'mirs_hardware.launch.py')),
-    launch_arguments={'esp_port': '/dev/ttyUSB1',
-                      'esp_baudrate': '115200',
-                      'enable_ekf_local': 'true'}.items())
+        PathJoinSubstitution([
+            FindPackageShare('mirs'), 'launch', 'mirs_launch.py'])),
+    launch_arguments={
+        'esp_port': '/dev/ttyUSB1',
+        'enable_ekf_local': 'true',
+        'enable_rviz': 'false',
+        'enable_nav2': 'false',
+        'enable_slam_toolbox': 'false',
+    }.items())
 ```
 
 <!-- API-CONTRACT-END -->

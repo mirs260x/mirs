@@ -5,6 +5,8 @@ project(mirs)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(mirs_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 add_executable(parameter_publisher src/parameter_publisher.cpp)
 ament_target_dependencies(parameter_publisher
@@ -36,12 +38,16 @@ ament_target_dependencies(reset
   mirs_msgs
 )
 
+add_executable(scan_safety_guard src/scan_safety_guard.cpp)
+ament_target_dependencies(scan_safety_guard rclcpp sensor_msgs geometry_msgs)
+
 install(TARGETS
   parameter_publisher
   update
   reboot
   reset
   basic
+  scan_safety_guard
   DESTINATION lib/${PROJECT_NAME}
 )
 
