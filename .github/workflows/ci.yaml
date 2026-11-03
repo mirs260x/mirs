@@ -8,7 +8,8 @@ on:
 
 jobs:
   colcon-test:
-    runs-on: ubuntu-latest
+    # ROS 2 JazzyのUbuntuバイナリ配布対象に合わせる。
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ros-tooling/setup-ros@v0.7
