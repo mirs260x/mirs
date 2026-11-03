@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""Start MIRS hardware, SLAM Toolbox mapping, and RViz."""
+"""機体の制御、SLAM Toolboxによる地図作成、RVizの表示を起動する。"""
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource

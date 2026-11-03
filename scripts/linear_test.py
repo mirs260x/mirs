@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-"""Odometer straight-line accuracy test node (move 3 m and stop)."""
+"""3 m直進して停止し、オドメトリの距離精度を確認する。"""
 
 import math
 import time
@@ -39,7 +39,7 @@ MIN_SPEED = 0.05  # [m/s] 指令下限（静摩擦に勝つため）
 
 
 class OdomLinearTest(Node):
-    """P-control test node that drives forward to a target distance."""
+    """目標距離までの残りに応じて速度を調整し、直進走行を試す。"""
 
     def __init__(self):
         super().__init__('odom_linear_test')

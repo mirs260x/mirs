@@ -1,0 +1,99 @@
+/** @mainpage mirs
+
+実機の走行、地図作成、ナビゲーションを起動する。ROS 2サービスによる指令、制御パラメータの配信、走行試験、LiDARによる停止判定を含む。
+
+各ファイルの説明からソースと宣言を参照できる。C/C++・Arduino・Python・JavaはDoxygenで解析する。Dart・Kotlin・ROS型定義・シェルはソース掲載ページを使う。コメントのない関数も一覧に含むが、その動作が説明済みという意味ではない。
+
+@section source_list ファイル一覧
+
+- @ref launch/ekf_nav_launch.py "launch/ekf_nav_launch.py"
+
+- @ref launch/ekf_slam_launch.py "launch/ekf_slam_launch.py"
+
+- @ref launch/mirs_launch.py "launch/mirs_launch.py"
+
+- @ref launch/nav_launch.py "launch/nav_launch.py"
+
+- @ref launch/slam_launch.py "launch/slam_launch.py"
+
+- @ref scripts/linear_test.py "scripts/linear_test.py"
+
+- @ref scripts/rotate_test.py "scripts/rotate_test.py"
+
+- @ref scripts/trajectory_publisher.py "scripts/trajectory_publisher.py"
+
+- @ref src/basic_command.cpp "src/basic_command.cpp"
+
+- @ref src/encoder_reset.cpp "src/encoder_reset.cpp"
+
+- @ref src/parameter_publisher.cpp "src/parameter_publisher.cpp"
+
+- @ref src/parameter_update.cpp "src/parameter_update.cpp"
+
+- @ref src/reboot.cpp "src/reboot.cpp"
+
+- @ref src/scan_safety_guard.cpp "src/scan_safety_guard.cpp"
+
+- @ref test/trajectory_logic_test.py "test/trajectory_logic_test.py"
+
+*/
+
+/** @file launch/ekf_nav_launch.py
+ * @brief IMUと車輪オドメトリをEKFで統合し、Nav2による走行とRVizの表示を起動する。
+ */
+
+/** @file launch/ekf_slam_launch.py
+ * @brief IMUと車輪オドメトリをEKFで統合し、SLAM Toolboxによる地図作成とRVizを起動する。
+ */
+
+/** @file launch/mirs_launch.py
+ * @brief 機体のROS通信・センサ・制御パラメータを起動し、設定に応じて地図作成や走行処理を追加する。
+ */
+
+/** @file launch/nav_launch.py
+ * @brief 保存済み地図を使うNav2の走行とRVizを起動する。
+ */
+
+/** @file launch/slam_launch.py
+ * @brief 機体の制御、SLAM Toolboxによる地図作成、RVizの表示を起動する。
+ */
+
+/** @file scripts/linear_test.py
+ * @brief 3 m直進して停止し、オドメトリの距離精度を確認する。
+ */
+
+/** @file scripts/rotate_test.py
+ * @brief 一回転して停止し、オドメトリの角度精度を確認する。
+ */
+
+/** @file scripts/trajectory_publisher.py
+ * @brief 走行した軌跡をnav_msgs/Pathメッセージとして配信する。
+ */
+
+/** @file src/basic_command.cpp
+ * @brief ROSサービスで基本指令を送り、応答を受け取る。
+ */
+
+/** @file src/encoder_reset.cpp
+ * @brief ROSサービスでエンコーダの積算値リセットを要求する。
+ */
+
+/** @file src/parameter_publisher.cpp
+ * @brief 機体制御に必要なパラメータをROSトピックへ配信する。
+ */
+
+/** @file src/parameter_update.cpp
+ * @brief ROSサービスで制御パラメータの更新を要求する。
+ */
+
+/** @file src/reboot.cpp
+ * @brief ROSサービスで機体の再起動を要求する。
+ */
+
+/** @file src/scan_safety_guard.cpp
+ * @brief LiDARの前方距離を監視し、障害物が近い場合に速度指令を止める。
+ */
+
+/** @file test/trajectory_logic_test.py
+ * @brief ROSを起動せずに、走行軌跡を記録する処理を検証する。
+ */

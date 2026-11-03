@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-"""Publish the traveled path as a nav_msgs/Path message."""
+"""走行した軌跡をnav_msgs/Pathメッセージとして配信する。"""
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry, Path
 import rclpy
@@ -29,7 +29,7 @@ from rclpy.node import Node
 
 
 class TrajectoryPublisher(Node):
-    """Accumulate /odom poses at fixed distance intervals."""
+    """/odomの位置と向きを、一定の移動距離ごとに記録する。"""
 
     def __init__(self):
         super().__init__('trajectory_publisher')

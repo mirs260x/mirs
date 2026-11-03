@@ -23,3 +23,8 @@ colcon build --symlink-install --packages-select mirs
 - launchの `slam` 引数は `'True'`/`'False'`（Pythonリテラル。小文字はNav2側の式評価で死ぬ）
 - launchの数値引数は文字列で届く。Pythonノード側で寛容パースすること
 - root権限を使う操作（apt等）はしない。ファイル参照・編集とworkspace内コマンドのみ
+
+## コメント・Doxygen
+
+- [リポジトリ共通のコメント規約](../../../../AGENTS.md) に従う。
+- 専門用語を必要以上に使わず、役割・入出力・単位・条件を説明する。開発の経緯や会話を前提にした表現は避ける。

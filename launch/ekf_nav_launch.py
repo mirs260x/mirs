@@ -20,12 +20,7 @@
 # THE SOFTWARE.
 
 
-"""
-ekf_nav_launch.py.
-
-imuを使ってekfでオドメトリと融合するならこっちをつかってね
-navigation2とrvizを起動して、自律走行をするよ
-"""
+"""IMUと車輪オドメトリをEKFで統合し、Nav2による走行とRVizの表示を起動する。"""
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource

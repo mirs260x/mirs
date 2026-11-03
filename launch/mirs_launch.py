@@ -18,16 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""
-mirs_launch.py.
-
-上位launchはこのファイルをIncludeすること。
-直進走行や旋回走行のテストをするためにnavやslamやrvizを除いたノードをたちあげるよ
-"""
+"""機体のROS通信・センサ・制御パラメータを起動し、設定に応じて地図作成や走行処理を追加する。"""
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.launch_description_sources import (
+    AnyLaunchDescriptionSource, PythonLaunchDescriptionSource)
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -272,9 +268,11 @@ def generate_launch_description():
 
         # foxglove bridgeの起動
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([FindPackageShare('foxglove_bridge'), 'launch', 'foxglove_bridge_launch.xml']),
-                ),
+            AnyLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('foxglove_bridge'), 'launch',
+                    'foxglove_bridge_launch.xml']),
+            ),
             launch_arguments={
                 'address': LaunchConfiguration('foxglove_address'),
                 'port': LaunchConfiguration('foxglove_port'),

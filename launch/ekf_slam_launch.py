@@ -20,12 +20,7 @@
 # THE SOFTWARE.
 
 
-"""
-ekf_slam_launch.py.
-
-imuを使ってekfでオドメトリと融合するならこっちをつかってね
-slamtoolboxとrvizを起動して地図作成をするよ
-"""
+"""IMUと車輪オドメトリをEKFで統合し、SLAM Toolboxによる地図作成とRVizを起動する。"""
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource

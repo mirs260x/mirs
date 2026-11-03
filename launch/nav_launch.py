@@ -19,11 +19,7 @@
 # THE SOFTWARE.
 
 
-"""
-nav.launch.py.
-
-navigation2とrvizを起動して、自律走行をするよ
-"""
+"""保存済み地図を使うNav2の走行とRVizを起動する。"""
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
