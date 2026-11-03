@@ -251,7 +251,8 @@ ros2 launch mirs mirs_launch.py enable_slam_toolbox:=true enable_rviz:=true
 コントローラでロボットを動かしながら地図を作成します。移動中は RViz2 上でもロボットが動いていることを確認してください（地図作成には LiDAR だけでなくエンコーダの接続が必要です）。
 
 地図ができたら、以下のコマンドで保存してください。`<マップ名>` は保存したいファイル名に置き換えてください。
-mirsパッケージのmaps/（`src/original/mirs/maps/`）に保存されます。
+運用地図は`/home/developer/ws/maps/real/`に保存します。
+パッケージの`maps/`にはサンプル`es.yaml`と`es.pgm`だけを残します。
 slam_toolbox の `/map` は Durability `Transient Local` で配信されるため、
 関数内で `map_subscribe_transient_local:=true` を付けています。
 
@@ -260,8 +261,11 @@ slam_toolbox の `/map` は Durability `Transient Local` で配信されるた�
 ros2 topic info /map -v
 ros2 topic hz /map
 
-# 保存（maps/<マップ名>.pgm/.yaml が作られる）
-savemap <マップ名>
+# 保存（Dockerイメージの再ビルド前でも同じ場所へ保存できる）
+mkdir -p /home/developer/ws/maps/real
+ros2 run nav2_map_server map_saver_cli -f /home/developer/ws/maps/real/<マップ名> \
+  --ros-args -p map_subscribe_transient_local:=true -p save_map_timeout:=10.0
+# 再ビルド済みコンテナでは savemap <マップ名> も同じ保存先を使う
 ```
 
 作成した地図をそのまま使うと正常に動作しないことがあります。ペイントアプリ等で、点のまばらな箇所を塗りつぶす、足跡を壁として誤認識した箇所を白く塗りつぶすなどの後処理を行うとよいです。
@@ -271,11 +275,11 @@ savemap <マップ名>
 保存したマップを使って、スタート地点とゴール地点を定めて自律走行させることができます。
 
 ```bash
-# 既定マップ（gakuseigenkan.yaml）で起動する場合
-ros2 launch mirs nav.launch.py
+# サンプル地図（es.yaml）で起動する場合
+ros2 launch mirs nav_launch.py
 
 # コマンドラインでマップを指定する場合
-ros2 launch mirs nav.launch.py map:=<保存先パス>/<マップ名>.yaml
+ros2 launch mirs nav_launch.py map:=/home/developer/ws/maps/real/<マップ名>.yaml
 ```
 
 Nav2は起動時にAMCLを地図全体の一様分布で自動初期化します。ロボットをゆっくり動かすと、LiDARスキャンとオドメトリから候補が収束します。

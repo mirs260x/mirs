@@ -6,6 +6,10 @@
 
 @section source_list ファイル一覧
 
+- maps/es.yaml: サンプル占有格子の画像参照・解像度・原点・閾値。
+- maps/es.pgm: サンプル占有格子の画像。
+- maps/README.md: サンプルの用途と運用地図の保存先。
+
 - @ref launch/ekf_nav_launch.py "launch/ekf_nav_launch.py"
 
 - @ref launch/ekf_slam_launch.py "launch/ekf_slam_launch.py"

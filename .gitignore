@@ -3,7 +3,10 @@ __pycache__/
 # Doxygen generated output (rebuilt with `doxygen Doxyfile`)
 docs/generated/
 /.cache/neocmakelsp
-/maps
+/maps/*
+!/maps/es.yaml
+!/maps/es.pgm
+!/maps/README.md
 /build
 /install
 /log

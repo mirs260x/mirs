@@ -42,7 +42,7 @@ def generate_launch_description():
         # ファイル設定
         DeclareLaunchArgument(
             'map',
-            default_value=PathJoinSubstitution([mirs_pkg, 'maps', 'youkanato.yaml'])
+            default_value=PathJoinSubstitution([mirs_pkg, 'maps', 'es.yaml'])
         ),
         DeclareLaunchArgument(
             'ekf_config_file',
