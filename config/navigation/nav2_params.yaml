@@ -380,8 +380,8 @@ collision_monitor:
     base_frame_id: "base_footprint"
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
-    # scan_safety_guard gates Nav2 output before it reaches ESP32 /cmd_vel.
-    cmd_vel_out_topic: "cmd_vel_nav"
+    # 制御器出力cmd_vel_navへ戻さず、最終安全ゲート専用の入力へ渡す。
+    cmd_vel_out_topic: "cmd_vel_safe"
     state_topic: "collision_monitor_state"
     transform_tolerance: 0.2
     source_timeout: 1.0

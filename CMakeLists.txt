@@ -68,6 +68,11 @@ install(DIRECTORY
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_test(NAME test_scan_safety_ros
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/scan_safety_integration.py
+      $<TARGET_FILE:scan_safety_guard>)
+  set_tests_properties(test_scan_safety_ros PROPERTIES TIMEOUT 25)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_mirs test
     TIMEOUT 60

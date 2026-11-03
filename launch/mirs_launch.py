@@ -20,7 +20,14 @@
 
 """機体のROS通信・センサ・制御パラメータを起動し、設定に応じて地図作成や走行処理を追加する。"""
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+    SetEnvironmentVariable,
+    TimerAction,
+)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import (
     AnyLaunchDescriptionSource, PythonLaunchDescriptionSource)
@@ -28,7 +35,19 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Pyth
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
-from nav2_common.launch import RewrittenYaml
+
+
+def _validate_localization(context):
+    """Nav2と独立SLAMの同時起動によるmap→odomの二重配信を拒否する。"""
+    def enabled(name):
+        value = LaunchConfiguration(name).perform(context).lower()
+        return value in ('true', '1', 'yes')
+
+    if enabled('enable_nav2') and enabled('enable_slam_toolbox'):
+        raise RuntimeError(
+            'Use enable_nav2:=true slam:=True enable_slam_toolbox:=false for Nav2 SLAM; '
+            'independent SLAM and Nav2 localization would compete for map -> odom')
+    return []
 
 
 def generate_launch_description():
@@ -38,6 +57,8 @@ def generate_launch_description():
     nav2_bringup_pkg = FindPackageShare('nav2_bringup')
 
     return LaunchDescription([
+        # 実機ファームウェアのDDSドメインに合わせ、シミュレーションと分離する。
+        SetEnvironmentVariable("ROS_DOMAIN_ID", "90"),
 
         # ファイル設定
         DeclareLaunchArgument(
@@ -75,6 +96,9 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         # node
         DeclareLaunchArgument('enable_lidar', default_value='true'),
+        # 外部launchがLiDARドライバを持つ場合も、安全ゲートを個別に有効化できる。
+        DeclareLaunchArgument('enable_scan_safety',
+                              default_value=LaunchConfiguration('enable_lidar')),
         DeclareLaunchArgument('scan_safety_stop_distance', default_value='0.35'),
         DeclareLaunchArgument('scan_safety_resume_distance', default_value='0.50'),
         DeclareLaunchArgument('scan_safety_forward_angle', default_value='30.0'),
@@ -94,9 +118,9 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_static_base_footprint_to_base_link_tf',
                               default_value='true'),
         DeclareLaunchArgument('enable_static_base_link_to_imu_link_tf', default_value='false'),
-        DeclareLaunchArgument('enable_slam_toolbox', default_value='false'),
         DeclareLaunchArgument('enable_foxglove_bridge', default_value='true'),
 
+        OpaqueFunction(function=_validate_localization),
         Node(
             package='mirs',
             executable='parameter_publisher',
@@ -193,7 +217,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'scan_topic': '/scan',
-                'input_cmd_vel_topic': '/cmd_vel_nav',
+                'input_cmd_vel_topic': '/cmd_vel_safe',
                 'output_cmd_vel_topic': '/cmd_vel',
                 'stop_distance': ParameterValue(
                     LaunchConfiguration('scan_safety_stop_distance'), value_type=float),
@@ -204,7 +228,7 @@ def generate_launch_description():
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
             }],
             condition=IfCondition(PythonExpression([
-                "'", LaunchConfiguration('enable_lidar'), "'.lower() == 'true' and '",
+                "'", LaunchConfiguration('enable_scan_safety'), "'.lower() == 'true' and '",
                 LaunchConfiguration('enable_nav2'), "'.lower() == 'true'",
             ])),
         ),
@@ -218,14 +242,7 @@ def generate_launch_description():
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
                 'autostart': LaunchConfiguration('autostart'),
                 'slam': LaunchConfiguration('slam'),
-                'params_file': RewrittenYaml(
-                    source_file=LaunchConfiguration('nav2_params_file'),
-                    param_rewrites={
-                        'bt_navigator.ros__parameters.navigate_complete_coverage.plugin':
-                        'nav2_bt_navigator::NavigateToPoseNavigator',
-                    },
-                    convert_types=True,
-                ),
+                'params_file': LaunchConfiguration('nav2_params_file'),
             }.items(),
             condition=IfCondition(LaunchConfiguration('enable_nav2'))
         ),

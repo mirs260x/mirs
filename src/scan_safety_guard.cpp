@@ -1,3 +1,6 @@
+/** @file scan_safety_guard.cpp
+ * @brief /scanで前方を確認し、/cmd_vel_safeからESP32用/cmd_velへ指令を渡す。
+ */
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -13,15 +16,16 @@
 
 using namespace std::chrono_literals;
 
-// /scan の近距離障害物でNav2の速度指令を遮断する最終ゲート。
+/** @brief 前方障害物または入力途絶時に速度指令をゼロへ置き換える。 */
 class ScanSafetyGuard : public rclcpp::Node
 {
 public:
+  /** @brief 距離[m]・角度[deg]・途絶時間[s]を読み、入力監視と20Hz出力を開始する。 */
   ScanSafetyGuard()
   : Node("scan_safety_guard")
   {
     scan_topic_ = declare_parameter<std::string>("scan_topic", "/scan");
-    input_topic_ = declare_parameter<std::string>("input_cmd_vel_topic", "/cmd_vel_nav");
+    input_topic_ = declare_parameter<std::string>("input_cmd_vel_topic", "/cmd_vel_safe");
     output_topic_ = declare_parameter<std::string>("output_cmd_vel_topic", "/cmd_vel");
     stop_distance_ = declare_parameter<double>("stop_distance", 0.35);
     resume_distance_ = declare_parameter<double>("resume_distance", 0.50);

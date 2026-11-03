@@ -47,6 +47,8 @@ def generate_launch_description():
                 'map': LaunchConfiguration('map'),
                 'enable_rviz': 'true',
                 'enable_nav2': 'true',
+                'enable_ekf_local': 'true',
+                'enable_static_base_link_to_imu_link_tf': 'true',
             }.items()
         )
     ])

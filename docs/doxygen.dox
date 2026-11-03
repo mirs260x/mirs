@@ -6,6 +6,9 @@
 
 @section source_list ファイル一覧
 
+- test/scan_safety_integration.py: 専用ドメインとトピックで安全ゲートの停止・復帰・入力途絶を検証する。
+
+
 - maps/es.yaml: サンプル占有格子の画像参照・解像度・原点・閾値。
 - maps/es.pgm: サンプル占有格子の画像。
 - maps/README.md: サンプルの用途と運用地図の保存先。

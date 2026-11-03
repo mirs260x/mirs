@@ -19,7 +19,7 @@ docker(仮想環境)を使うか生環境を使うか選ぶことができます
 ## LiDAR安全停止
 
 `mirs_launch.py` / `bringup_launch.py` では、Nav2とLiDARが有効な場合に
-`scan_safety_guard` を起動します。Nav2の `collision_monitor` 出力 `/cmd_vel_nav` を監視し、
+`scan_safety_guard` を起動します。Nav2の `collision_monitor` 出力 `/cmd_vel_safe` を監視し、
 ゲート後の `/cmd_vel` をESP32へ送ります。Nav2を起動しない場合は監視ノードは起動せず、
 従来どおり `/cmd_vel` がESP32への指令になります。
 前方±30°の `/scan` に有効な距離があり、最小距離が0.35 m以下になるとESP32向け速度指令を
@@ -322,7 +322,8 @@ BLE実機なしで起動する場合は `enable_ble:=false` が必須です（GA
 | 名前 | 型 | 方向 | 説明 |
 |---|---|---|---|
 | `/cmd_vel` | `geometry_msgs/Twist` | Nav2時: 安全ゲート→ESP32 / Nav2なし: 入力→ESP32 | Nav2起動時はLiDAR判定後の速度指令 |
-| `/cmd_vel_nav` | `geometry_msgs/Twist` | 入力（Nav2→安全ゲート） | Nav2出力（Nav2起動時） |
+| `/cmd_vel_nav` | `geometry_msgs/Twist` | Nav2制御器→速度平滑化 | 平滑化前の指令 |
+| `/cmd_vel_safe` | `geometry_msgs/Twist` | 衝突監視→安全ゲート | 最終ゲートに渡す指令 |
 | `/odom` | `nav_msgs/Odometry` | 出力 | オドメトリ（ESP32がmicro-ROS経由で配信、`frame_id=odom`） |
 | `/params` | `mirs_msgs/BasicParam` | 出力 | ESP用パラメータ転送（2Hz） |
 | `/scan` | `sensor_msgs/LaserScan` | 出力 | LiDARドライバ（sllidar_ros2経由） |
@@ -423,3 +424,21 @@ IncludeLaunchDescription(
 - [Navigation2](https://navigation.ros.org/)
 - [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox)
 - [micro-ROS](https://micro.ros.org/)
+
+
+### 実機とGazeboの分離
+
+`mirs_launch.py`は子プロセスのROS_DOMAIN_IDを90に設定します。simulationは91を使います。
+端末でのtopic確認・rosbag記録にも対応するComposeサービス（実機は`ros`、Gazeboは`ros-simulation`）を使ってください。
+Foxgloveの待受ポートは実機8765、Gazebo8766です。同一Domain内では、一台分の機体・Nav2・地図作成のlaunchだけを起動します。
+
+速度指令は`cmd_vel_nav → cmd_vel_smoothed → cmd_vel_safe → cmd_vel`へ流れます。
+衝突監視の出力を`cmd_vel_nav`へ戻すと速度平滑化への循環が生じるため、別の名前を使います。
+`enable_scan_safety`の既定値は`enable_lidar`です。外部launchがLiDARドライバを起動する場合は、
+`enable_lidar:=false enable_scan_safety:=true`でスキャン監視を有効にできます。
+Nav2を無効にした状態では、この引数をtrueにしても安全ゲートは起動しません。
+
+`nav_launch.py`はEKFとIMU取付TFを有効にします。SLAMとNav2を使う場合は
+`enable_nav2:=true slam:=True enable_slam_toolbox:=false`とし、独立SLAMとAMCLによるmap→odomの二重配信を避けます。
+
+`nav2_params_file`を独自の設定へ差し替える場合も、衝突監視の出力を`cmd_vel_safe`に合わせてください。`cmd_vel`へ直接出すと最終安全ゲートと同じトピックへ二重に配信されます。
