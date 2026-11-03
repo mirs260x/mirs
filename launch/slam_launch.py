@@ -7,8 +7,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -18,40 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
-"""
-slam.launch.py.
-
-Bring up hardware, slam_toolbox, and RViz.
-"""
+"""機体の制御、SLAM Toolboxによる地図作成、RVizの表示を起動する。"""
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-
     mirs_pkg = FindPackageShare('mirs')
 
     return LaunchDescription([
-
-        DeclareLaunchArgument(
-            'ekf_config_file',
-            default_value=PathJoinSubstitution([mirs_pkg, 'config', 'ekf', 'ekf_params.yaml'])
-        ),
-
-        # mirs_launch.py
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([mirs_pkg, 'launch', 'mirs_launch.py'])
-            ),
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                mirs_pkg, 'launch', 'mirs_launch.py'])),
             launch_arguments={
-                'ekf_config_file': LaunchConfiguration('ekf_config_file'),
-                'enable_ekf_local': 'true',
                 'enable_slam_toolbox': 'true',
-                'enable_rviz': 'true'
-            }.items()
-        )
-    ])
+                'enable_rviz': 'true',
+                'enable_nav2': 'false',
+                'enable_ekf_local': 'true',
+                'enable_static_base_link_to_imu_link_tf': 'true',
+                }.items(),
+            )
+        ])

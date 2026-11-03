@@ -1,0 +1,5 @@
+repositories:
+  mirs_msgs:
+    type: git
+    url: https://github.com/mirs260x/mirs_msgs.git
+    version: develop

@@ -1,27 +1,31 @@
-# Doxygen configuration for mirs ROS 2 package.
-# Usage: `doxygen Doxyfile` -> static HTML/XML under docs/generated (no server needed).
-# Convention: lightweight Doxygen (brief/param/return) on public API only.
+# パッケージのルートで doxygen Doxyfile を実行する。
+PROJECT_NAME = "mirs"
+OUTPUT_DIRECTORY = docs/generated
+OUTPUT_LANGUAGE = Japanese
+INPUT_ENCODING = UTF-8
+INPUT = "docs/doxygen.dox" "launch/ekf_nav_launch.py" "launch/ekf_slam_launch.py" "launch/mirs_launch.py" "launch/nav_launch.py" "launch/slam_launch.py" "scripts/linear_test.py" "scripts/rotate_test.py" "scripts/trajectory_publisher.py" "src/basic_command.cpp" "src/encoder_reset.cpp" "src/parameter_publisher.cpp" "src/parameter_update.cpp" "src/reboot.cpp" "src/scan_safety_guard.cpp" "test/trajectory_logic_test.py"
+FILE_PATTERNS = *.dox *.c *.cc *.cpp *.h *.hpp *.ino *.py *.java
+EXTENSION_MAPPING = ino=C++
+RECURSIVE = NO
+EXAMPLE_PATH = .
+EXAMPLE_RECURSIVE = YES
+EXTRACT_ALL = YES
+EXTRACT_STATIC = YES
+EXTRACT_PRIVATE = NO
+SOURCE_BROWSER = YES
+INLINE_SOURCES = NO
+STRIP_FROM_PATH = .
+FULL_PATH_NAMES = YES
+PYTHON_DOCSTRING = NO
+GENERATE_HTML = YES
+GENERATE_LATEX = NO
+GENERATE_XML = NO
+HAVE_DOT = NO
+QUIET = YES
+WARNINGS = YES
+WARN_IF_UNDOCUMENTED = NO
+WARN_AS_ERROR = YES
+WARN_LOGFILE = docs/generated/warnings.log
 
-PROJECT_NAME           = "mirs"
-OUTPUT_DIRECTORY       = docs/generated
-INPUT                  = README.md src scripts launch
-RECURSIVE              = YES
-FILE_PATTERNS          = *.cpp *.hpp *.py
-EXCLUDE_PATTERNS       = */test/* */__pycache__/*
-
-GENERATE_HTML          = YES
-GENERATE_LATEX         = NO
-GENERATE_MAN           = NO
-GENERATE_RTF           = NO
-GENERATE_XML           = YES
-GENERATE_DOCBOOK       = NO
-
-EXTRACT_ALL            = NO
-EXTRACT_PRIVATE        = NO
-EXTRACT_STATIC         = YES
-HIDE_UNDOC_MEMBERS     = YES
-JAVADOC_AUTOBRIEF      = NO
-QT_AUTOBRIEF           = NO
-WARN_NO_PARAMDOC       = YES
-WARN_AS_ERROR          = YES
-QUIET                  = YES
+# 他の資料とブラウザのメニュー設定を共有しない。
+HTML_PROJECT_COOKIE = mirs_docs_mirs_v2

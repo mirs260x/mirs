@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-"""Odometer rotation accuracy test node (rotate once and stop)."""
+"""一回転して停止し、オドメトリの角度精度を確認する。"""
 
 import math
 import time
@@ -40,7 +40,7 @@ MIN_SPEED = 0.1  # [rad/s] 指令下限
 
 
 class OdomRotateTest(Node):
-    """P-control test node that rotates to a target angle."""
+    """目標角度までの残りに応じて角速度を調整し、旋回走行を試す。"""
 
     def __init__(self):
         super().__init__('odom_rotate_test')

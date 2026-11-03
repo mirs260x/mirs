@@ -20,10 +20,10 @@
 
 
 """
-Test trajectory publisher logic without ROS.
+ROSを起動せずに、走行軌跡を記録する処理を検証する。
 
-The test imports the real script after installing minimal ROS module stubs.
-It covers distance calculation, the 5 cm recording threshold, and jump filtering.
+必要なROSモジュールを代替する最小限の定義を用意し、実際のスクリプトを読み込む。
+距離計算、5 cmごとの記録条件、位置が急変した場合の除外処理を確認する。
 """
 import importlib.util
 from pathlib import Path

@@ -19,11 +19,7 @@
 # THE SOFTWARE.
 
 
-"""
-nav.launch.py.
-
-Bring up hardware, Nav2, and RViz.
-"""
+"""保存済み地図を使うNav2の走行とRVizを起動する。"""
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -49,9 +45,10 @@ def generate_launch_description():
             ),
             launch_arguments={
                 'map': LaunchConfiguration('map'),
-                'enable_ekf_local': 'true',
                 'enable_rviz': 'true',
                 'enable_nav2': 'true',
+                'enable_ekf_local': 'true',
+                'enable_static_base_link_to_imu_link_tf': 'true',
             }.items()
         )
     ])

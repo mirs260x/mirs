@@ -5,6 +5,8 @@ project(mirs)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(mirs_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 add_executable(parameter_publisher src/parameter_publisher.cpp)
 ament_target_dependencies(parameter_publisher
@@ -36,12 +38,16 @@ ament_target_dependencies(reset
   mirs_msgs
 )
 
+add_executable(scan_safety_guard src/scan_safety_guard.cpp)
+ament_target_dependencies(scan_safety_guard rclcpp sensor_msgs geometry_msgs)
+
 install(TARGETS
   parameter_publisher
   update
   reboot
   reset
   basic
+  scan_safety_guard
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -62,6 +68,11 @@ install(DIRECTORY
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_test(NAME test_scan_safety_ros
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/scan_safety_integration.py
+      $<TARGET_FILE:scan_safety_guard>)
+  set_tests_properties(test_scan_safety_ros PROPERTIES TIMEOUT 25)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_mirs test
     TIMEOUT 60
